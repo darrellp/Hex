@@ -9,6 +9,7 @@ namespace Hex
         #region Private variables
         private readonly Board _board;
         internal int[,] ChainIds { get; private set; }
+		private Dictionary<int, List<GridLocation>> _mapChainIdToLocations = new Dictionary<int, List<GridLocation>>();
         #endregion
 
         #region Properties
@@ -27,6 +28,7 @@ namespace Hex
         internal void Clear()
         {
             ChainIds = new int[Size, Size];
+	        _mapChainIdToLocations.Clear();
             _nextChainId = 0;
         }
 
@@ -140,10 +142,11 @@ namespace Hex
             return !IsEdgeChain(id) ? id.ToString() : $"{LowBitsFromId(id)}:S{SideFromId(id)}";
         }
 
-        private void SetChainId(GridLocation loc, int id)
-        {
+		// TODO: Can I do all the _mapChainIdToLocations setting here?
+		private void SetChainId(GridLocation loc, int id)
+		{
             Console.WriteLine($"ChainId at {loc} set to {IdToString(id)}");
-            ChainIds[loc.Row, loc.Column] = id;
+			ChainIds[loc.Row, loc.Column] = id;
         }
 
         private int HighBitsFromLocation(GridLocation loc)
@@ -208,6 +211,7 @@ namespace Hex
             {
                 // We're not connected to anything so start our own chain ID...
                 SetChainId(loc, highBitsWithSign + NextId());
+				_mapChainIdToLocations[ChainId(loc)] = new List<GridLocation> {loc};
                 return;
             }
 
@@ -223,6 +227,8 @@ namespace Hex
                 {
                     // We're not connected to an edge so just take on the common ID of our neighbors
                     SetChainId(loc, commonId);
+					// Add ourselves to the list for this chainId
+	                _mapChainIdToLocations[commonId].Add(loc);
                     return;
                 }
 
@@ -249,6 +255,7 @@ namespace Hex
                 {
                     // Case 2
                     SetChainId(loc, commonId);
+	                _mapChainIdToLocations[commonId].Add(loc);
                     return;
                 }
                 // Case 3: We won!
@@ -298,13 +305,27 @@ namespace Hex
         {
             var player = Player(loc);
             var id = ChainId(loc);
+	        if (_mapChainIdToLocations.ContainsKey(id))
+	        {
+		        throw new InvalidOperationException("Promulgating pre-existing ID");
+	        }
+			var ourLocList = _mapChainIdToLocations[id] = new List<GridLocation>();
             var queue = new Queue<GridLocation>();
             queue.Enqueue(loc);
+
+			// We delete all adjacent id lists here since we only have to perform the deletion at the starting
+			// location
+	        foreach (var adjLoc in Adjacent(loc).Where(l => Player(l) == player))
+	        {
+		        _mapChainIdToLocations.Remove(ChainId(adjLoc));
+	        }
 
             while (queue.Count != 0)
             {
                 // Queued locations have the proper chain id.  We just have to promulgate them to neighbors.
                 var curLoc = queue.Dequeue();
+				ourLocList.Add(curLoc);
+				
 
                 // For every like colored neighbor which has a different chain id from ours
                 foreach (var neighbor in Adjacent(curLoc).Where(l => Player(l) == player && ChainId(l) != id))
@@ -319,6 +340,8 @@ namespace Hex
         private void CheckIdsOnRemoval(GridLocation loc, Player player)
         {
             var oldId = ChainId(loc);
+			// We're gonna totally lose the old ID
+	        _mapChainIdToLocations[oldId] = null;
             SetChainId(loc, 0);
             var checks = Adjacent(loc).Where(l => Player(l) == player).ToArray();
 
@@ -326,7 +349,9 @@ namespace Hex
             while ((nextLocations = checks.Where(l => ChainId(l) == oldId).ToArray()).Length > 0)
             {
                 var nextLocation = nextLocations[0];
-                SetChainId(nextLocation, NextId());
+	            var id = NextId();
+                SetChainId(nextLocation, id);
+				_mapChainIdToLocations[id] = new List<GridLocation>();
                 PromulgateIdAfterDelete(nextLocation);
             }
         }
@@ -336,6 +361,7 @@ namespace Hex
             var player = Player(loc);
             var id = ChainId(loc);
             var queue = new Queue<GridLocation>();
+	        var ourLocList = _mapChainIdToLocations[id];
             queue.Enqueue(loc);
             var chainLocations = new List<GridLocation>();
 
@@ -343,6 +369,7 @@ namespace Hex
             {
                 // Queued locations have the proper chain id.  We just have to promulgate them to neighbors.
                 var curLoc = queue.Dequeue();
+	            ourLocList.Add(curLoc);
 
                 // For every like colored neighbor which has a different chain id from ours
                 foreach (var neighbor in Adjacent(curLoc).Where(l => Player(l) == player && ChainId(l) != id))
@@ -354,7 +381,10 @@ namespace Hex
                     // and ProulgateIdAfterDelete().  Check for that case here.
                     if (!IsEdgeChain(id) && HighBitsFromLocation(neighbor) != 0)
                     {
+						// TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
+	                    _mapChainIdToLocations.Remove(id);
                         id |= HighBitsFromLocation(neighbor);
+	                    _mapChainIdToLocations[id] = ourLocList;
                         foreach (var prevLocation in chainLocations)
                         {
                             SetChainId(prevLocation, id);
