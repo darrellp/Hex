@@ -17,7 +17,6 @@ namespace Hex
         internal Player CurPlayer { get; private set; }
 	    internal int Size { get; }
         internal Player[,] Players { get; private set; }
-        internal int[,] ChainIds { get; private set; }
 	    internal Player Winner { get; private set; }
 	    internal Analysis Analysis => _analysis;
         #endregion
@@ -38,7 +37,6 @@ namespace Hex
 			Size = size;
 
 			Players = new Player[Size, Size];
-            ChainIds = new int[Size, Size];
 			CurPlayer = Hex.Player.White;
 		    Winner = Hex.Player.Unoccupied;
             _analysis = new Analysis(this);
@@ -51,9 +49,9 @@ namespace Hex
 	    {
             Players = new Player[Size, Size];
 	        CurPlayer = Hex.Player.White;
-            ChainIds = new int[Size, Size];
 	        Winner = Hex.Player.Unoccupied;
 	        _boardDrawing.ClearBoard();
+            _analysis.Clear();
         }
 
         internal void Resize()
