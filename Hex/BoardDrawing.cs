@@ -24,6 +24,7 @@ namespace Hex
 		private readonly Shape[,] _stones;
 		private int Size { get; }
 	    private readonly Label _lblLocation;
+	    private readonly Label _lblChainCounts;
 	    private int _cellEnterCount;
         #endregion
 
@@ -38,9 +39,11 @@ namespace Hex
 			_hexHeight = 2 * HexCell.S3D2 * Size;
 			_boardCanvas = MainWindow.Main.CvsBoard;
 		    _lblLocation = MainWindow.Main.LblLocation;
+		    _lblChainCounts = MainWindow.Main.LblChains;
 			_cells = new Path[Size, Size];
 			_stones = new Shape[Size, Size];
 			Redraw();
+		    ClearBoard();
 		}
         #endregion
 
@@ -54,6 +57,7 @@ namespace Hex
 					DrawStone(new GridLocation(iRow, iCol), Player.Unoccupied);
 				}
 			}
+            SetChainCount();
 		}
 
 		internal void Redraw()
@@ -140,16 +144,18 @@ namespace Hex
 				}
 				_boardCanvas.Children.Remove(rmvStone);
 				_stones[location.Row, location.Column] = null;
-				return;
 			}
-
-			if (_stones[location.Row, location.Column] != null)
+			else
 			{
-				throw new ArgumentException("Placing stone on occupied cell");
-			}
+			    if (_stones[location.Row, location.Column] != null)
+			    {
+				    throw new ArgumentException("Placing stone on occupied cell");
+			    }
 
-			var stone = DrawStone(GetCenter(location), player);
-			_stones[location.Row, location.Column] = stone;
+			    var stone = DrawStone(GetCenter(location), player);
+			    _stones[location.Row, location.Column] = stone;
+			}
+		    SetChainCount();
 		}
 
 	    private Shape DrawStone(Point placement, Player player)
@@ -170,7 +176,7 @@ namespace Hex
 			Canvas.SetLeft(stone, placement.X - stoneDiameter / 2);
 			_boardCanvas.Children.Add(stone);
 
-			return stone;
+            return stone;
 		}
         #endregion
 
@@ -180,6 +186,13 @@ namespace Hex
 	        var cell = (Path)sender;
 	        var gridLocation = (GridLocation)cell.Tag;
 	        _board.Clicked(gridLocation);
+	    }
+
+	    private void SetChainCount()
+	    {
+	        var whiteChainCount = _board.Analysis.ChainCount(Player.White);
+	        var blackChainCount = _board.Analysis.ChainCount(Player.Black);
+	        _lblChainCounts.Content = $"WCH:{whiteChainCount} BCH:{blackChainCount}";
 	    }
 
 	    private void EnterCell(object sender, MouseEventArgs e)

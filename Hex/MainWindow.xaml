@@ -17,11 +17,13 @@
         <Grid Margin="0" Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="83.892"/>
-                <ColumnDefinition/>
+                <ColumnDefinition Width="107*"/>
+                <ColumnDefinition Width="328*"/>
             </Grid.ColumnDefinitions>
             <Label x:Name="LblLocation"/>
+            <Label x:Name="LblChains" Grid.Column="1"/>
         </Grid>
-        <StackPanel HorizontalAlignment="Left" Orientation="Horizontal" >
+        <StackPanel Grid.Row="0" HorizontalAlignment="Left" Orientation="Horizontal" >
             <Button Content="Clear Board" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Click="button_Click"/>
             <Button Content="Undo" HorizontalAlignment="Center" VerticalContentAlignment="Center" Click="Button_Click_1"/>
         </StackPanel>

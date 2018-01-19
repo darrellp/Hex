@@ -42,10 +42,17 @@ namespace Hex
         {
             CheckIdsOnRemoval(loc, player);
         }
+
+        internal int ChainCount(Player player)
+        {
+            return player == Player.Unoccupied ?
+                _mapChainIdToLocations.Count :
+                _mapChainIdToLocations.Count(entry => _board.Player(entry.Value[0]) == player);
+        }
         #endregion
 
         #region Utilities
-        internal Player Player(GridLocation loc)
+        internal Player PlayerAtLoc(GridLocation loc)
         {
             return _board.Players[loc.Row, loc.Column];
         }
@@ -155,7 +162,7 @@ namespace Hex
             // See what the high bits are required to be for our location
             var side = -1;
 
-            if (Player(loc) == Hex.Player.Black)
+            if (PlayerAtLoc(loc) == Player.Black)
             {
                 if (loc.Column == 0)
                 {
@@ -199,14 +206,14 @@ namespace Hex
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         internal void CheckChainIds(GridLocation loc, Player player)
         {
-            if (player == Hex.Player.Unoccupied)
+            if (player == Player.Unoccupied)
             {
                 throw new ArgumentException("Checking chain ids on unoccupied cell");
             }
 
             // See what the high bits are required to be for our location
             var highBitsWithSign = HighBitsFromLocation(loc);
-            var connections = Adjacent(loc).Where(l => Player(l) == player).ToArray();
+            var connections = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
 
             if (connections.Length == 0)
             {
@@ -304,19 +311,16 @@ namespace Hex
 
         private void PromulgateId(GridLocation loc)
         {
-            var player = Player(loc);
+            var player = PlayerAtLoc(loc);
             var id = ChainId(loc);
-	        if (_mapChainIdToLocations.ContainsKey(id))
-	        {
-		        throw new InvalidOperationException("Promulgating pre-existing ID");
-	        }
-			var ourLocList = _mapChainIdToLocations[id] = new List<GridLocation>();
+
+            var ourLocList = _mapChainIdToLocations[id] = new List<GridLocation>();
             var queue = new Queue<GridLocation>();
             queue.Enqueue(loc);
 
 			// We delete all adjacent id lists here since we only have to perform the deletion at the starting
 			// location
-	        foreach (var adjLoc in Adjacent(loc).Where(l => Player(l) == player))
+	        foreach (var adjLoc in Adjacent(loc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
 	        {
 		        _mapChainIdToLocations.Remove(ChainId(adjLoc));
 	        }
@@ -329,7 +333,7 @@ namespace Hex
 				
 
                 // For every like colored neighbor which has a different chain id from ours
-                foreach (var neighbor in Adjacent(curLoc).Where(l => Player(l) == player && ChainId(l) != id))
+                foreach (var neighbor in Adjacent(curLoc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
                 {
                     // Set the proper chain id and queue him up for promulgation
                     SetChainId(neighbor, id);
@@ -342,9 +346,9 @@ namespace Hex
         {
             var oldId = ChainId(loc);
 			// We're gonna totally lose the old ID
-	        _mapChainIdToLocations[oldId] = null;
+	        _mapChainIdToLocations.Remove(oldId);
             SetChainId(loc, 0);
-            var checks = Adjacent(loc).Where(l => Player(l) == player).ToArray();
+            var checks = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
 
             GridLocation[] nextLocations;
             while ((nextLocations = checks.Where(l => ChainId(l) == oldId).ToArray()).Length > 0)
@@ -359,7 +363,7 @@ namespace Hex
 
         private void PromulgateIdAfterDelete(GridLocation loc)
         {
-            var player = Player(loc);
+            var player = PlayerAtLoc(loc);
             var id = ChainId(loc);
             var queue = new Queue<GridLocation>();
 	        var ourLocList = _mapChainIdToLocations[id];
@@ -373,7 +377,7 @@ namespace Hex
 	            ourLocList.Add(curLoc);
 
                 // For every like colored neighbor which has a different chain id from ours
-                foreach (var neighbor in Adjacent(curLoc).Where(l => Player(l) == player && ChainId(l) != id))
+                foreach (var neighbor in Adjacent(curLoc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
                 {
                     // When promulgating for deletions we can run into a situation where the current ID is
                     // unconnected but we find out during promulgation that the chain is, in fact, connected.

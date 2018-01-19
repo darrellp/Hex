@@ -1,6 +1,4 @@
-﻿using System.Windows;
-
-namespace Hex
+﻿namespace Hex
 {
     /// <summary>
     /// Interaction logic for App.xaml

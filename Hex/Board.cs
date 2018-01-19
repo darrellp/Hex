@@ -19,6 +19,7 @@ namespace Hex
         internal Player[,] Players { get; private set; }
         internal int[,] ChainIds { get; private set; }
 	    internal Player Winner { get; private set; }
+	    internal Analysis Analysis => _analysis;
         #endregion
 
         #region Private variables
@@ -38,22 +39,21 @@ namespace Hex
 
 			Players = new Player[Size, Size];
             ChainIds = new int[Size, Size];
-			_boardDrawing = new BoardDrawing(this);
 			CurPlayer = Hex.Player.White;
 		    Winner = Hex.Player.Unoccupied;
             _analysis = new Analysis(this);
+			_boardDrawing = new BoardDrawing(this);
 		}
         #endregion
 
         #region Modifiers
         internal void Clear()
 	    {
-	        _boardDrawing.ClearBoard();
             Players = new Player[Size, Size];
 	        CurPlayer = Hex.Player.White;
             ChainIds = new int[Size, Size];
 	        Winner = Hex.Player.Unoccupied;
-
+	        _boardDrawing.ClearBoard();
         }
 
         internal void Resize()
@@ -69,13 +69,11 @@ namespace Hex
 	        }
 	        var lastLocation = _moves[_moves.Count - 1];
 	        _moves.RemoveAt(_moves.Count - 1);
-            _boardDrawing.DrawStone(lastLocation, Hex.Player.Unoccupied);
 	        Players[lastLocation.Row, lastLocation.Column] = Hex.Player.Unoccupied;
 	        ChangePlayer();
             _analysis.RemoveStone(lastLocation, CurPlayer);
-			//SetIdsOnRemoval(lastLocation, CurPlayer);
 	        Winner = Hex.Player.Unoccupied;
-
+            _boardDrawing.DrawStone(lastLocation, Hex.Player.Unoccupied);
         }
 
 	    public void SetWinner(Player player)
