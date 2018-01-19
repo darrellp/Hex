@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-
-namespace Hex
+﻿namespace Hex
 {
     public struct GridLocation
     {

@@ -9,7 +9,8 @@ namespace Hex
         #region Private variables
         private readonly Board _board;
         internal int[,] ChainIds { get; private set; }
-		private Dictionary<int, List<GridLocation>> _mapChainIdToLocations = new Dictionary<int, List<GridLocation>>();
+		private readonly Dictionary<int, List<GridLocation>> _mapChainIdToLocations =
+            new Dictionary<int, List<GridLocation>>();
         #endregion
 
         #region Properties
@@ -393,32 +394,6 @@ namespace Hex
                     // Set the proper chain id and queue him up for promulgation
                     SetChainId(neighbor, id);
                     chainLocations.Add(neighbor);
-                    queue.Enqueue(neighbor);
-                }
-            }
-        }
-
-        private IEnumerable<GridLocation> ChainMembers(GridLocation loc)
-        {
-            // TODO: change this to just get chain members from list
-            var player = Player(loc);
-            if (player == Hex.Player.Unoccupied)
-            {
-                yield break;
-            }
-            var alreadyReturned = new HashSet<GridLocation>();
-            var queue = new Queue<GridLocation>();
-            queue.Enqueue(loc);
-
-            while (queue.Count != 0)
-            {
-                var ret = queue.Dequeue();
-                yield return ret;
-
-                alreadyReturned.Add(ret);
-
-                foreach (var neighbor in Adjacent(ret).Where(l => !alreadyReturned.Contains(l)))
-                {
                     queue.Enqueue(neighbor);
                 }
             }
