@@ -157,12 +157,12 @@ namespace Hex
 			ChainIds[loc.Row, loc.Column] = id;
         }
 
-        private int HighBitsFromLocation(GridLocation loc)
+        private int HighBitsFromLocation(GridLocation loc, Player player)
         {
             // See what the high bits are required to be for our location
             var side = -1;
 
-            if (PlayerAtLoc(loc) == Player.Black)
+            if (player == Player.Black)
             {
                 if (loc.Column == 0)
                 {
@@ -190,16 +190,7 @@ namespace Hex
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         ///  <summary>   Check chain identifiers after a single change to the board </summary>
         /// 
-        ///  <remarks>   TODO: Check on Win conditions
-        ///              I'm not sure what to do with win conditions so that they'll undo correctly.
-        ///              Undo probably needs to check if we're in a winning condition and take appropriate
-        ///              action. The problem is that there's no really good way of making proper chain
-        ///              IDs on a win since we have two different ids from two different sides meeting and
-        ///              therefore not being promulgated into each other.  Probably, the undo can simply
-        ///              recognize the win, reset winner, remove the piece without trying to do any fixups
-        ///              on chain IDs.
-        ///              
-        ///              Darrell Plank, 1/17/2018. </remarks>
+        ///  <remarks>   Darrell Plank, 1/17/2018. </remarks>
         /// 
         ///  <param name="loc">     The location where the stone was placed. </param>
         ///  <param name="player">  Player that placed the stone. </param>
@@ -212,7 +203,7 @@ namespace Hex
             }
 
             // See what the high bits are required to be for our location
-            var highBitsWithSign = HighBitsFromLocation(loc);
+            var highBitsWithSign = HighBitsFromLocation(loc, PlayerAtLoc(loc));
             var connections = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
 
             if (connections.Length == 0)
@@ -293,10 +284,10 @@ namespace Hex
                 PromulgateId(loc);
                 return;
             }
-            var highBitCollection = new HashSet<int>(ids.Where(id => !IsEdgeChain(id)).Select(HighBitsFromId).ToArray());
+            var highBitCollection = new HashSet<int>(ids.Where(id => IsEdgeChain(id)).Select(HighBitsFromId).ToArray());
             if (highBitsWithSign < 0)
             {
-                highBitCollection.Add(highBitsWithSign);
+                highBitCollection.Add(HighBitsFromId(highBitsWithSign));
             }
             if (highBitCollection.Count > 1)
             {
@@ -384,11 +375,11 @@ namespace Hex
                     // When this happens we have to back up, reset all the previous ID's to the connected ID
                     // and continue on from there.  This check is the primary difference between PromulgateId()
                     // and ProulgateIdAfterDelete().  Check for that case here.
-                    if (!IsEdgeChain(id) && HighBitsFromLocation(neighbor) != 0)
+                    if (!IsEdgeChain(id) && HighBitsFromLocation(neighbor, PlayerAtLoc(neighbor)) != 0)
                     {
 						// TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
 	                    _mapChainIdToLocations.Remove(id);
-                        id |= HighBitsFromLocation(neighbor);
+                        id |= HighBitsFromLocation(neighbor, PlayerAtLoc(neighbor));
 	                    _mapChainIdToLocations[id] = ourLocList;
                         foreach (var prevLocation in chainLocations)
                         {
