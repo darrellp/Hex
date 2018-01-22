@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace Hex
@@ -17,15 +18,16 @@ namespace Hex
         internal Player CurPlayer { get; private set; }
 	    internal int Size { get; }
         internal Player[,] Players { get; private set; }
+        [DefaultValue(Hex.Player.Unoccupied)]
 	    internal Player Winner { get; private set; }
-	    internal Analysis Analysis => _analysis;
-        #endregion
+	    internal Analysis Analysis { get; }
+
+	    #endregion
 
         #region Private variables
         private readonly BoardDrawing _boardDrawing;
 	    private readonly List<GridLocation> _moves = new List<GridLocation>();
-	    private readonly Analysis _analysis;
-        #endregion
+	    #endregion
 
         #region Constructor
         public Board(int size = 11)
@@ -38,8 +40,7 @@ namespace Hex
 
 			Players = new Player[Size, Size];
 			CurPlayer = Hex.Player.White;
-		    Winner = Hex.Player.Unoccupied;
-            _analysis = new Analysis(this);
+            Analysis = new Analysis(this);
 			_boardDrawing = new BoardDrawing(this);
 		}
         #endregion
@@ -51,7 +52,7 @@ namespace Hex
 	        CurPlayer = Hex.Player.White;
 	        Winner = Hex.Player.Unoccupied;
 	        _boardDrawing.ClearBoard();
-            _analysis.Clear();
+            Analysis.Clear();
         }
 
         internal void Resize()
@@ -69,7 +70,7 @@ namespace Hex
 	        _moves.RemoveAt(_moves.Count - 1);
 	        Players[lastLocation.Row, lastLocation.Column] = Hex.Player.Unoccupied;
 	        ChangePlayer();
-            _analysis.RemoveStone(lastLocation, CurPlayer);
+            Analysis.RemoveStone(lastLocation, CurPlayer);
 	        Winner = Hex.Player.Unoccupied;
             _boardDrawing.DrawStone(lastLocation, Hex.Player.Unoccupied);
         }
@@ -94,7 +95,7 @@ namespace Hex
 				return;
 			}
 			Players[location.Row, location.Column] = CurPlayer;
-            _analysis.PlaceStone(location, CurPlayer);
+            Analysis.PlaceStone(location, CurPlayer);
             //CheckChainIds(location);
             _moves.Add(location);
 			_boardDrawing.DrawStone(location, CurPlayer);
