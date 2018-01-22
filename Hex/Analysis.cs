@@ -113,78 +113,40 @@ namespace Hex
             return id < 0;
         }
 
-        internal int LowBitsFromId(int id)
-        {
-            return id & 0x07ffffff;
-        }
-
-        internal int SideFromId(int id)
-        {
-            switch (HighBitsFromId(id))
-            {
-                case 1:
-                    return 0;
-                case 2:
-                    return 1;
-                case 4:
-                    return 2;
-                default:
-                    return 3;
-            }
-        }
-
-        // This includes the sign bit
-        internal int IdFromSide(int side)
-        {
-            return ((1 << side) | 0b10000) << 27;
-        }
-
-        // This doesn't include the sign bit
-        internal int HighBitsFromId(int id)
-        {
-            return (id >> 27) & 0b1111;
-        }
-
-        private string IdToString(int id)
-        {
-            return !IsEdgeChain(id) ? id.ToString() : $"{LowBitsFromId(id)}:S{SideFromId(id)}";
-        }
-
 		// TODO: Can I do all the _mapChainIdToLocations setting here?
 		private void SetChainId(GridLocation loc, int id)
 		{
-            Console.WriteLine($"ChainId at {loc} set to {IdToString(id)}");
+            Console.WriteLine($"ChainId at {loc} set to {id}");
 			ChainIds[loc.Row, loc.Column] = id;
         }
 
-        private int HighBitsFromLocation(GridLocation loc, Player player)
+        private int EdgeGroup(GridLocation loc, Player player)
         {
-            // See what the high bits are required to be for our location
-            var side = -1;
+            var side = NextId();
 
             if (player == Player.Black)
             {
                 if (loc.Column == 0)
                 {
-                    side = 0;
+                    side = -1;
                 }
                 else if (loc.Column == Size - 1)
                 {
-                    side = 2;
+                    side = -3;
                 }
             }
             else
             {
                 if (loc.Row == 0)
                 {
-                    side = 3;
+                    side = -4;
                 }
                 else if (loc.Row == Size - 1)
                 {
-                    side = 1;
+                    side = -2;
                 }
             }
-            return side < 0 ? 0 : IdFromSide(side);
+            return side;
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -203,100 +165,36 @@ namespace Hex
             }
 
             // See what the high bits are required to be for our location
-            var highBitsWithSign = HighBitsFromLocation(loc, PlayerAtLoc(loc));
+            var newGroupId = EdgeGroup(loc, PlayerAtLoc(loc));
             var connections = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
-
-            if (connections.Length == 0)
-            {
-                // We're not connected to anything so start our own chain ID...
-                SetChainId(loc, highBitsWithSign + NextId());
-				_mapChainIdToLocations[ChainId(loc)] = new List<GridLocation> {loc};
-                return;
-            }
-
-            // We are actually connected to like colors
             var ids = connections.Select(c => ChainIds[c.Row, c.Column]).ToArray();
 
-            if (ids.Skip(1).All(id => id == ids[0]))
-            {
-                // All our neighbors have the same ID
-                var commonId = ids[0];
+            // Okay - we have more than one ID adjacent to us.  We look at all the neighboring
+            // group IDs along with our own.  If we find two different negative values, we've
+            // won.  Otherwise, we take the smallest of the groupcodes ourselves and propogate
+            // that to all our neighbors.  This means edge codes, which are negative, will get
+            // preferentially promulgated.  Otherwise, we'll just use the smallest non-edge code.
+            var foundNegId = newGroupId;        // NonNegative => no negative ID located yet
+            var minId = newGroupId;
 
-                if (highBitsWithSign == 0)
+            foreach (var id in ids)
+            {
+                if (id < 0)
                 {
-                    // We're not connected to an edge so just take on the common ID of our neighbors
-                    SetChainId(loc, commonId);
-					// Add ourselves to the list for this chainId
-	                _mapChainIdToLocations[commonId].Add(loc);
-                    return;
+                    if (foundNegId < 0 && foundNegId != id)
+                    {
+                        // We won!
+                        _board.SetWinner(_board.CurPlayer);
+                        return;
+                    }
+                    foundNegId = id;
                 }
-
-                // At this point we're edge connected and we're connected to like colored
-                // neighbors with the same ID.  Three possibilities exist:
-                // 
-                // 1. They have no highbits
-                //      Give our highbits to all members of the chain and take their low chain ID
-                //      
-                // 2. They have the same highbits as us
-                //      Just record our chain ID as the same as theirs
-                // 
-                // 3. They have different highbits from us
-                //      There are only two sets of highbits our color can possess so we have just
-                //      won the game!
-                if (HighBitsFromId(commonId) == 0)
+                if (id < minId)
                 {
-                    // Case 1
-                    SetChainId(loc, commonId + highBitsWithSign);
-                    PromulgateId(loc);
-                    return;
+                    minId = id;
                 }
-                if (HighBitsFromId(commonId) == highBitsWithSign)
-                {
-                    // Case 2
-                    SetChainId(loc, commonId);
-	                _mapChainIdToLocations[commonId].Add(loc);
-                    return;
-                }
-                // Case 3: We won!
-                _board.SetWinner(_board.CurPlayer);
-                return;
             }
-
-            // Okay - we have more than one ID adjacent to us.  The cases are:
-            //
-            // 1. All our neighbors are either unconnected or have the same connection as us.
-            //      Promulgate our newly created connection to all our neighbors.  Note that
-            //      if we are unconnected then all our neighbors must be unconnected in this case.
-            // 
-            // 2. There is at least one neighbor with a different connection than us or a neighbor
-            //      We've won!
-            // 
-            // 3. We're unconnected and at least one neighbor has a connection
-            //      We take that neighbor's ID and promulgate it among our other neighbors
-            if (ids.All(id =>
-            {
-                var highBits = HighBitsFromId(id);
-                return highBits == 0 || highBits == highBitsWithSign;
-            }))
-            {
-                // Case 1
-                SetChainId(loc, highBitsWithSign + NextId());
-                PromulgateId(loc);
-                return;
-            }
-            var highBitCollection = new HashSet<int>(ids.Where(id => IsEdgeChain(id)).Select(HighBitsFromId).ToArray());
-            if (highBitsWithSign < 0)
-            {
-                highBitCollection.Add(HighBitsFromId(highBitsWithSign));
-            }
-            if (highBitCollection.Count > 1)
-            {
-                // Case 2
-                _board.SetWinner(_board.CurPlayer);
-                return;
-            }
-            // Case 3
-            SetChainId(loc, ids.First(IsEdgeChain));
+            SetChainId(loc, minId);
             PromulgateId(loc);
         }
 
@@ -375,11 +273,11 @@ namespace Hex
                     // When this happens we have to back up, reset all the previous ID's to the connected ID
                     // and continue on from there.  This check is the primary difference between PromulgateId()
                     // and ProulgateIdAfterDelete().  Check for that case here.
-                    if (!IsEdgeChain(id) && HighBitsFromLocation(neighbor, PlayerAtLoc(neighbor)) != 0)
+                    if (!IsEdgeChain(id) && EdgeGroup(neighbor, PlayerAtLoc(neighbor)) != 0)
                     {
 						// TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
 	                    _mapChainIdToLocations.Remove(id);
-                        id |= HighBitsFromLocation(neighbor, PlayerAtLoc(neighbor));
+                        id |= EdgeGroup(neighbor, PlayerAtLoc(neighbor));
 	                    _mapChainIdToLocations[id] = ourLocList;
                         foreach (var prevLocation in chainLocations)
                         {
