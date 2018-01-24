@@ -1,9 +1,15 @@
-﻿namespace Hex
+﻿namespace HexLibrary
 {
     public struct GridLocation
     {
         public int Row { get; }
         public int Column { get; }
+        public bool IsNowhere => Row < 0;
+
+        public static GridLocation Nowhere()
+        {
+            return new GridLocation(-1, -1);
+        }
 
         public GridLocation(int row, int column)
         {

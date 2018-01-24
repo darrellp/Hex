@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Hex
+namespace HexLibrary
 {
-    internal class Analysis
+    public class Analysis
     {
         #region Private variables
         private readonly Board _board;
         internal int[,] ChainIds { get; private set; }
-		private readonly Dictionary<int, List<GridLocation>> _mapChainIdToLocations =
+        private readonly Dictionary<int, List<GridLocation>> _mapChainIdToLocations =
             new Dictionary<int, List<GridLocation>>();
         #endregion
 
@@ -23,36 +23,43 @@ namespace Hex
             _board = board;
             ChainIds = new int[Size, Size];
         }
+
+        internal Analysis(Analysis parent)
+        {
+            _board = parent._board;
+            ChainIds = new int[Size, Size];
+            Array.Copy(parent.ChainIds, ChainIds, Size * Size);
+        }
         #endregion
 
         #region Internal functions
         internal void Clear()
         {
             ChainIds = new int[Size, Size];
-	        _mapChainIdToLocations.Clear();
+            _mapChainIdToLocations.Clear();
             _nextChainId = 0;
         }
 
-        internal void PlaceStone(GridLocation loc, Player player)
+        internal void PlaceStone(GridLocation loc, PlayerColor player)
         {
             CheckChainIds(loc, player);
         }
 
-        internal void RemoveStone(GridLocation loc, Player player)
+        internal void RemoveStone(GridLocation loc, PlayerColor player)
         {
             CheckIdsOnRemoval(loc, player);
         }
 
-        internal int ChainCount(Player player)
+        public int ChainCount(PlayerColor player)
         {
-            return player == Player.Unoccupied ?
+            return player == PlayerColor.Unoccupied ?
                 _mapChainIdToLocations.Count :
                 _mapChainIdToLocations.Count(entry => _board.Player(entry.Value[0]) == player);
         }
         #endregion
 
         #region Utilities
-        internal Player PlayerAtLoc(GridLocation loc)
+        internal PlayerColor PlayerAtLoc(GridLocation loc)
         {
             return _board.Players[loc.Row, loc.Column];
         }
@@ -113,18 +120,18 @@ namespace Hex
             return id < 0;
         }
 
-		// TODO: Can I do all the _mapChainIdToLocations setting here?
-		private void SetChainId(GridLocation loc, int id)
-		{
+        // TODO: Can I do all the _mapChainIdToLocations setting here?
+        private void SetChainId(GridLocation loc, int id)
+        {
             Console.WriteLine($"ChainId at {loc} set to {id}");
-			ChainIds[loc.Row, loc.Column] = id;
+            ChainIds[loc.Row, loc.Column] = id;
         }
 
-        private int EdgeGroup(GridLocation loc, Player player)
+        private int EdgeGroup(GridLocation loc, PlayerColor player)
         {
             var side = NextId();
 
-            if (player == Player.Black)
+            if (player == PlayerColor.Black)
             {
                 if (loc.Column == 0)
                 {
@@ -157,14 +164,14 @@ namespace Hex
         ///  <param name="loc">     The location where the stone was placed. </param>
         ///  <param name="player">  Player that placed the stone. </param>
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        internal void CheckChainIds(GridLocation loc, Player player)
+        internal void CheckChainIds(GridLocation loc, PlayerColor player)
         {
-            if (player == Player.Unoccupied)
+            if (player == PlayerColor.Unoccupied)
             {
                 throw new ArgumentException("Checking chain ids on unoccupied cell");
             }
 
-            // See what the high bits are required to be for our location
+            // Get a new potential Group ID (or the proper edge ID if we're connected to an edge)
             var newGroupId = EdgeGroup(loc, PlayerAtLoc(loc));
             var connections = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
             var ids = connections.Select(c => ChainIds[c.Row, c.Column]).ToArray();
@@ -174,6 +181,9 @@ namespace Hex
             // won.  Otherwise, we take the smallest of the groupcodes ourselves and propogate
             // that to all our neighbors.  This means edge codes, which are negative, will get
             // preferentially promulgated.  Otherwise, we'll just use the smallest non-edge code.
+            // TODO: minID had ought to take the place of foundNegId below.
+            // After all, if minID is negative then it's the only negative value we've found
+            // 
             var foundNegId = newGroupId;        // NonNegative => no negative ID located yet
             var minId = newGroupId;
 
@@ -184,7 +194,7 @@ namespace Hex
                     if (foundNegId < 0 && foundNegId != id)
                     {
                         // We won!
-                        _board.SetWinner(_board.CurPlayer);
+                        _board.SetWinner(_board.CurPlayerColor);
                         return;
                     }
                     foundNegId = id;
@@ -207,19 +217,19 @@ namespace Hex
             var queue = new Queue<GridLocation>();
             queue.Enqueue(loc);
 
-			// We delete all adjacent id lists here since we only have to perform the deletion at the starting
-			// location
-	        foreach (var adjLoc in Adjacent(loc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
-	        {
-		        _mapChainIdToLocations.Remove(ChainId(adjLoc));
-	        }
+            // We delete all adjacent id lists here since we only have to perform the deletion at the starting
+            // location
+            foreach (var adjLoc in Adjacent(loc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
+            {
+                _mapChainIdToLocations.Remove(ChainId(adjLoc));
+            }
 
             while (queue.Count != 0)
             {
                 // Queued locations have the proper chain id.  We just have to promulgate them to neighbors.
                 var curLoc = queue.Dequeue();
-				ourLocList.Add(curLoc);
-				
+                ourLocList.Add(curLoc);
+
 
                 // For every like colored neighbor which has a different chain id from ours
                 foreach (var neighbor in Adjacent(curLoc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
@@ -231,11 +241,11 @@ namespace Hex
             }
         }
 
-        private void CheckIdsOnRemoval(GridLocation loc, Player player)
+        private void CheckIdsOnRemoval(GridLocation loc, PlayerColor player)
         {
             var oldId = ChainId(loc);
-			// We're gonna totally lose the old ID
-	        _mapChainIdToLocations.Remove(oldId);
+            // We're gonna totally lose the old ID
+            _mapChainIdToLocations.Remove(oldId);
             SetChainId(loc, 0);
             var checks = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
 
@@ -243,9 +253,9 @@ namespace Hex
             while ((nextLocations = checks.Where(l => ChainId(l) == oldId).ToArray()).Length > 0)
             {
                 var nextLocation = nextLocations[0];
-	            var id = NextId();
+                var id = NextId();
                 SetChainId(nextLocation, id);
-				_mapChainIdToLocations[id] = new List<GridLocation>();
+                _mapChainIdToLocations[id] = new List<GridLocation>();
                 PromulgateIdAfterDelete(nextLocation);
             }
         }
@@ -255,7 +265,7 @@ namespace Hex
             var player = PlayerAtLoc(loc);
             var id = ChainId(loc);
             var queue = new Queue<GridLocation>();
-	        var ourLocList = _mapChainIdToLocations[id];
+            var ourLocList = _mapChainIdToLocations[id];
             queue.Enqueue(loc);
             var chainLocations = new List<GridLocation>();
 
@@ -263,7 +273,7 @@ namespace Hex
             {
                 // Queued locations have the proper chain id.  We just have to promulgate them to neighbors.
                 var curLoc = queue.Dequeue();
-	            ourLocList.Add(curLoc);
+                ourLocList.Add(curLoc);
 
                 // For every like colored neighbor which has a different chain id from ours
                 foreach (var neighbor in Adjacent(curLoc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
@@ -275,10 +285,10 @@ namespace Hex
                     // and ProulgateIdAfterDelete().  Check for that case here.
                     if (!IsEdgeChain(id) && EdgeGroup(neighbor, PlayerAtLoc(neighbor)) != 0)
                     {
-						// TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
-	                    _mapChainIdToLocations.Remove(id);
+                        // TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
+                        _mapChainIdToLocations.Remove(id);
                         id |= EdgeGroup(neighbor, PlayerAtLoc(neighbor));
-	                    _mapChainIdToLocations[id] = ourLocList;
+                        _mapChainIdToLocations[id] = ourLocList;
                         foreach (var prevLocation in chainLocations)
                         {
                             SetChainId(prevLocation, id);
@@ -290,6 +300,38 @@ namespace Hex
                     queue.Enqueue(neighbor);
                 }
             }
+        }
+        #endregion
+
+        #region Path determination
+        // Based on chapter 8 of "Hex Strategy: Making the Right Connections" by Cameron Browne
+        void DeterminePaths()
+        {
+            // Make a copy of ourselves to do the analysis in so we don't screw up our chain IDs
+            var childAnalysisWhite = new Analysis(this);
+            var childAnalysisBlack = new Analysis(this);
+            childAnalysisWhite.FindPath(PlayerColor.White);
+            childAnalysisBlack.FindPath(PlayerColor.Black);
+        }
+
+        void FindPath(PlayerColor player)
+        {
+            // We maintained the singleton groups during piece placement so the "GenerateChains" and
+            // "SingletonGroups" on p. 128 are already done.
+            while (_board.Winner == PlayerColor.Unoccupied)
+            {
+                TakeAStep();
+            }
+        }
+
+        private void TakeAStep()
+        {
+
+        }
+
+        void TakeInitialSteps(int groupId)
+        {
+
         }
         #endregion
     }

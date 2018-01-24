@@ -4,11 +4,12 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using HexLibrary;
 using static System.Math;
 
 namespace Hex
 {
-	class BoardDrawing
+	class BoardDrawing : IBoardDrawing
 	{
         #region Private variables
         private const double StoneShrinkage = 0.85;
@@ -29,38 +30,39 @@ namespace Hex
         #endregion
 
         #region Constructor
-        internal BoardDrawing(Board board)
-		{
-			_board = board;
+        internal BoardDrawing()
+        {
+            _board = new Board(this);
 			Size = _board.Size;
 			// Assumes side lengths of 1 and origin at board center
 			_minx = -(3.0 * Size - 1) / 2;
 			_hexWidth = -2 * _minx;
 			_hexHeight = 2 * HexCell.S3D2 * Size;
-			_boardCanvas = MainWindow.Main.CvsBoard;
+		    _boardCanvas = MainWindow.Main.CvsBoard;
 		    _lblLocation = MainWindow.Main.LblLocation;
 		    _lblChainCounts = MainWindow.Main.LblChains;
-			_cells = new Path[Size, Size];
-			_stones = new Shape[Size, Size];
-			Redraw();
+		    _cells = new Path[Size, Size];
+		    _stones = new Shape[Size, Size];
+		    Redraw();
 		    ClearBoard();
 		}
         #endregion
 
         #region Drawing Setup
-        internal void ClearBoard()
-		{
+        public void ClearBoard()
+        {
 			for (var iRow = 0; iRow < Size; iRow++)
 			{
 				for (var iCol = 0; iCol < Size; iCol++)
 				{
-					DrawStone(new GridLocation(iRow, iCol), Player.Unoccupied);
+					DrawStone(new GridLocation(iRow, iCol), PlayerColor.Unoccupied);
 				}
 			}
+            _board.Clear();
             SetChainCount();
 		}
 
-		internal void Redraw()
+		public void Redraw()
 		{
 			SetupTransform();
 			_boardCanvas.Children.Clear();
@@ -77,10 +79,10 @@ namespace Hex
 			var leftCrd = GetCenter(0, 0).X;
 			var bottomCrd = GetCenter(0, Size - 1).Y;
 			var rightCrd = GetCenter(Size - 1, Size - 1).X;
-			DrawStone(new Point(leftCrd, topCrd), Player.Black);
-			DrawStone(new Point(rightCrd, bottomCrd), Player.Black);
-			DrawStone(new Point(leftCrd, bottomCrd), Player.White);
-			DrawStone(new Point(rightCrd, topCrd), Player.White);
+			DrawStone(new Point(leftCrd, topCrd), PlayerColor.Black);
+			DrawStone(new Point(rightCrd, bottomCrd), PlayerColor.Black);
+			DrawStone(new Point(leftCrd, bottomCrd), PlayerColor.White);
+			DrawStone(new Point(rightCrd, topCrd), PlayerColor.White);
 		}
 
 	    private void SetupTransform()
@@ -111,6 +113,16 @@ namespace Hex
         #endregion
 
         #region Drawing
+
+	    public void Undo()
+	    {
+	        var undoLoc = _board.Undo();
+	        if (!undoLoc.IsNowhere)
+	        {
+	            DrawStone(undoLoc, PlayerColor.Unoccupied);
+	        }
+
+        }
         private void DrawCell(int row, int col)
 		{
 			var brush = new SolidColorBrush { Color = Colors.Black };
@@ -133,9 +145,9 @@ namespace Hex
 			_cells[row, col] = path;
 		}
 
-	    public void DrawStone(GridLocation location, Player player)
+	    public void DrawStone(GridLocation location, PlayerColor player)
 		{
-			if (player == Player.Unoccupied)
+            if (player == PlayerColor.Unoccupied)
 			{
 				var rmvStone = _stones[location.Row, location.Column];
 				if (rmvStone == null)
@@ -158,9 +170,9 @@ namespace Hex
 		    SetChainCount();
 		}
 
-	    private Shape DrawStone(Point placement, Player player)
+	    private Shape DrawStone(Point placement, PlayerColor player)
 		{
-			Brush fill = new SolidColorBrush(player == Player.White ? Colors.White : Colors.Black);
+			Brush fill = new SolidColorBrush(player == PlayerColor.White ? Colors.White : Colors.Black);
 			Brush stroke = new SolidColorBrush(Colors.Black);
 			var stoneDiameter = HexCell.S3D2 * 2.0 * StoneShrinkage * _cellWidth;
 			Shape stone = new Ellipse
@@ -190,8 +202,8 @@ namespace Hex
 
 	    private void SetChainCount()
 	    {
-	        var whiteChainCount = _board.Analysis.ChainCount(Player.White);
-	        var blackChainCount = _board.Analysis.ChainCount(Player.Black);
+	        var whiteChainCount = _board.Analysis.ChainCount(PlayerColor.White);
+	        var blackChainCount = _board.Analysis.ChainCount(PlayerColor.Black);
 	        _lblChainCounts.Content = $"WCH:{whiteChainCount} BCH:{blackChainCount}";
 	    }
 
