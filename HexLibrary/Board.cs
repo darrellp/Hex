@@ -15,7 +15,7 @@ namespace HexLibrary
     public class Board
     {
         #region Public properties
-        internal PlayerColor CurPlayerColor { get; private set; }
+        public PlayerColor CurPlayer { get; private set; }
         public int Size { get; }
         public PlayerColor[,] Players { get; private set; }
         [DefaultValue(PlayerColor.Unoccupied)]
@@ -24,12 +24,11 @@ namespace HexLibrary
         #endregion
 
         #region Private variables
-        private readonly IBoardDrawing _boardDrawing;
         private readonly List<GridLocation> _moves = new List<GridLocation>();
         #endregion
 
         #region Constructor
-        public Board(IBoardDrawing boardDrawing, int size = 11)
+        public Board(int size = 11)
         {
             if (size > 26)
             {
@@ -38,9 +37,8 @@ namespace HexLibrary
             Size = size;
 
             Players = new PlayerColor[Size, Size];
-            CurPlayerColor = PlayerColor.White;
+            CurPlayer = PlayerColor.White;
             Analysis = new Analysis(this);
-            _boardDrawing = boardDrawing;
         }
         #endregion
 
@@ -49,7 +47,7 @@ namespace HexLibrary
         public void Clear()
         {
             Players = new PlayerColor[Size, Size];
-            CurPlayerColor = PlayerColor.White;
+            CurPlayer = PlayerColor.White;
             Winner = PlayerColor.Unoccupied;
             Analysis.Clear();
         }
@@ -64,7 +62,7 @@ namespace HexLibrary
             _moves.RemoveAt(_moves.Count - 1);
             Players[lastLocation.Row, lastLocation.Column] = PlayerColor.Unoccupied;
             ChangePlayer();
-            Analysis.RemoveStone(lastLocation, CurPlayerColor);
+            Analysis.RemoveStone(lastLocation, CurPlayer);
             Winner = PlayerColor.Unoccupied;
             return lastLocation;
         }
@@ -91,12 +89,11 @@ namespace HexLibrary
             Players[loc.Row, loc.Column] = player;
             Analysis.PlaceStone(loc, player);
             _moves.Add(loc);
-            _boardDrawing.DrawStone(loc, player);
         }
 
         public void Clicked(GridLocation loc)
         {
-            PlaceStone(loc, CurPlayerColor);
+            PlaceStone(loc, CurPlayer);
             ChangePlayer();
         }
         #endregion
@@ -109,7 +106,7 @@ namespace HexLibrary
 
         private void ChangePlayer()
         {
-            CurPlayerColor = CurPlayerColor == PlayerColor.Black ? PlayerColor.White : PlayerColor.Black;
+            CurPlayer = CurPlayer == PlayerColor.Black ? PlayerColor.White : PlayerColor.Black;
         }
 
         private static readonly GridLocation[] Offsets = new[]

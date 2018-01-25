@@ -9,7 +9,7 @@ using static System.Math;
 
 namespace Hex
 {
-	class BoardDrawing : IBoardDrawing
+	class BoardDrawing
 	{
         #region Private variables
         private const double StoneShrinkage = 0.85;
@@ -32,7 +32,7 @@ namespace Hex
         #region Constructor
         internal BoardDrawing()
         {
-            _board = new Board(this);
+            _board = new Board();
 			Size = _board.Size;
 			// Assumes side lengths of 1 and origin at board center
 			_minx = -(3.0 * Size - 1) / 2;
@@ -197,7 +197,9 @@ namespace Hex
 	    {
 	        var cell = (Path)sender;
 	        var gridLocation = (GridLocation)cell.Tag;
+		    var curPlayer = _board.CurPlayer;
 	        _board.Clicked(gridLocation);
+		    DrawStone(gridLocation, curPlayer);
 	    }
 
 	    private void SetChainCount()

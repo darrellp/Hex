@@ -9,19 +9,17 @@ namespace HexTest
     [TestClass]
     public class BoardTest
     {
-	    readonly BoardDrawingTest _bdt = new BoardDrawingTest();
-
         [TestMethod]
         public void TestConstructor()
         {
-            var board = new Board(_bdt);
+            var board = new Board();
             board.ShouldNotBeNull();
         }
 
         [TestMethod]
         public void TestAdjacent()
         {
-            var board = new Board(_bdt);
+            var board = new Board();
             // ReSharper disable InconsistentNaming
             var adj0_0 = board.Adjacent(new GridLocation(0, 0)).ToArray();
             adj0_0.Length.ShouldBe(2);
@@ -36,7 +34,7 @@ namespace HexTest
         [TestMethod]
         public void TestBridgeTo()
         {
-            var board = new Board(_bdt);
+            var board = new Board();
             var loc = new GridLocation(0, 0);
             // ReSharper disable InconsistentNaming
             var bridge0_0 = board.BridgedTo(loc).ToArray();

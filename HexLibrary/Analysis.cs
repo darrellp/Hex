@@ -194,7 +194,7 @@ namespace HexLibrary
                     if (foundNegId < 0 && foundNegId != id)
                     {
                         // We won!
-                        _board.SetWinner(_board.CurPlayerColor);
+                        _board.SetWinner(_board.CurPlayer);
                         return;
                     }
                     foundNegId = id;
