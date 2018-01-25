@@ -197,13 +197,6 @@ namespace HexLibrary
             public readonly GridLocation Support1;
             public readonly GridLocation Support2;
 
-            public BridgeInfo(GridLocation location, GridLocation support1, GridLocation support2)
-            {
-                Location = location;
-                Support1 = support1;
-                Support2 = support2;
-            }
-
             public BridgeInfo(int locRow, int locCol, int support1Row, int support1Col, int support2Row, int support2Col)
             {
                 Location = new GridLocation(locRow, locCol);

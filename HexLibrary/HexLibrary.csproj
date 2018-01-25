@@ -43,7 +43,6 @@
     <Compile Include="Analysis.cs" />
     <Compile Include="Board.cs" />
     <Compile Include="GridLocation.cs" />
-    <Compile Include="IBoardDrawing.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
