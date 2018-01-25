@@ -126,10 +126,10 @@ namespace HexLibrary
         private static readonly BridgeInfo[] BridgeOffsets = new BridgeInfo[]
         {
 	        // Starting from upper right and proceeding clockwise
-	        new BridgeInfo(2, -1, 1, -1, 0, 1),
+	        new BridgeInfo(2, -1, 1, -1, 1, 0),
             new BridgeInfo(1, 1, 1, 0, 0, 1),
-            new BridgeInfo(-1, 2, -1, 1, 0, 1),
-            new BridgeInfo(-2, 1, -1, 0, -1, 1),
+            new BridgeInfo(-1, 2, 0, 1, -1, 1),
+            new BridgeInfo(-2, 1, -1, 1, -1, 0),
             new BridgeInfo(-1, -1, -1, 0, 0, -1),
             new BridgeInfo(1, -2, 0, -1, 1, -1)
         };
@@ -163,7 +163,7 @@ namespace HexLibrary
             {
                 if (CheckBridge(loc, player, iBridge, includeFriendlyOccupied))
                 {
-                    yield return BridgeOffsets[iBridge].Location;
+                    yield return loc + BridgeOffsets[iBridge].Location;
                 }
             }
         }

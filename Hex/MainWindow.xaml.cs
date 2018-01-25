@@ -1,5 +1,4 @@
 ﻿using System.Windows;
-using HexLibrary;
 
 namespace Hex
 {
@@ -9,7 +8,7 @@ namespace Hex
     public partial class MainWindow
     {
         internal static MainWindow Main;
-        internal BoardDrawing _boardDrawing;
+        internal BoardDrawing BoardDrawing;
 
         public MainWindow()
         {
@@ -19,22 +18,22 @@ namespace Hex
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             Main = this;
-            _boardDrawing = new BoardDrawing();
+            BoardDrawing = new BoardDrawing();
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            _boardDrawing?.Redraw();
+            BoardDrawing?.Redraw();
         }
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
-            _boardDrawing.ClearBoard();
+            BoardDrawing.ClearBoard();
         }
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            _boardDrawing.Undo();
+            BoardDrawing.Undo();
         }
     }
 }

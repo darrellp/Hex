@@ -15,7 +15,7 @@ namespace Hex
         // First point is the one at the upper right and they're listed
         // clockwise, repeating that first point at the end.
 	    internal static readonly double S3D2 = Sqrt(3) / 2;
-	    private static readonly Point[] _pointsHorz = {
+	    private static readonly Point[] PointsHorz = {
 		    new Point(0.5, S3D2),
 			new Point(1, 0),
 			new Point(0.5, -S3D2),
@@ -33,7 +33,7 @@ namespace Hex
         //         \/
         // First point is the one at the top and they're listed
         // clockwise, repeating that first point at the end.
-	    private static readonly Point[] _pointsVert =
+	    private static readonly Point[] PointsVert =
 	    {
 		    new Point(0, 1),
 		    new Point(S3D2, 0.5),
@@ -69,7 +69,7 @@ namespace Hex
         internal static Geometry Cell(Vector center, double sideLength = 1.0, byte sideFlags = 0b111111, bool fHorizontal = true)
         {
             var ret = new PathGeometry();
-            var pts = (fHorizontal ? _pointsHorz : _pointsVert).Select(p => new Point(sideLength * p.X, sideLength * p.Y) + center).ToArray();
+            var pts = (fHorizontal ? PointsHorz : PointsVert).Select(p => new Point(sideLength * p.X, sideLength * p.Y) + center).ToArray();
             var pathFigure = new PathFigure {StartPoint = pts[0]};
 
             for (var iSide = 0; iSide < 6; iSide++)
