@@ -6,7 +6,7 @@ using static HexTest.Utilities;
 namespace HexTest
 {
     [TestClass]
-    public class GroupTest
+    public class ChainTest
     {
         [TestMethod]
         public void TestOneInsert()
@@ -16,9 +16,9 @@ namespace HexTest
             board.PlaceStone(loc, PlayerColor.White);
             var id = board.Analysis.IdAt(loc);
             id.ShouldNotBe(0);
-            var group = board.Analysis.GroupLocations(id);
-            group.Count.ShouldBe(1);
-            group[0].ShouldBe(loc);
+            var chain = board.Analysis.ChainLocations(id);
+            chain.Count.ShouldBe(1);
+            chain[0].ShouldBe(loc);
         }
 
         [TestMethod]
@@ -31,28 +31,28 @@ namespace HexTest
 
             board.PlaceStone(loc1, PlayerColor.White);
             var id1 = board.Analysis.IdAt(loc1);
-            var locs = board.Analysis.GroupLocations(id1);
+            var locs = board.Analysis.ChainLocations(id1);
             locs.Count.ShouldBe(1);
             locs[0].ShouldBe(loc1);
 
             board.PlaceStone(loc3, PlayerColor.White);
             var id3 = board.Analysis.IdAt(loc3);
             id1.ShouldNotBe(id3);
-            locs = board.Analysis.GroupLocations(id3);
+            locs = board.Analysis.ChainLocations(id3);
             locs.Count.ShouldBe(1);
             locs[0].ShouldBe(loc3);
             board.Analysis.ChainCount(PlayerColor.White).ShouldBe(2);
 
             board.PlaceStone(loc2, PlayerColor.White);
             var id = board.Analysis.IdAt(loc2);
-            locs = board.Analysis.GroupLocations(id);
+            locs = board.Analysis.ChainLocations(id);
             locs.Count.ShouldBe(3);
             IsPermutation(locs, ToLocs(6, 6, 7, 6, 8, 6)).ShouldBeTrue();
             board.Analysis.ChainCount(PlayerColor.White).ShouldBe(1);
 
             board.Undo();
             id3 = board.Analysis.IdAt(loc3);
-            locs = board.Analysis.GroupLocations(id3);
+            locs = board.Analysis.ChainLocations(id3);
             locs.Count.ShouldBe(1);
             locs[0].ShouldBe(loc3);
             board.Analysis.ChainCount(PlayerColor.White).ShouldBe(2);

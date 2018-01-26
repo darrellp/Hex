@@ -59,7 +59,7 @@ namespace HexLibrary
         #endregion
 
         #region Queries
-        internal List<GridLocation> GroupLocations(int id)
+        internal List<GridLocation> ChainLocations(int id)
         {
             return _mapChainIdToLocations[id];
         }
@@ -101,8 +101,8 @@ namespace HexLibrary
 
         #region Chain IDs
         // Chain IDs are just successive integers except for ones meeting winning edges which are
-        // negative with the values below.  Any groups connected to an edge are considered to be
-        // part of one large group
+        // negative with the values below.  Any chains connected to an edge are considered to be
+        // part of one large chain
         // 
         // High Bits/Sides:
         //           /\
@@ -135,7 +135,7 @@ namespace HexLibrary
             ChainIds[loc.Row, loc.Column] = id;
         }
 
-        private int EdgeGroup(GridLocation loc, PlayerColor player)
+        private int NewOrEdgeId(GridLocation loc, PlayerColor player)
         {
             var side = NextId();
 
@@ -179,21 +179,21 @@ namespace HexLibrary
                 throw new ArgumentException("Checking chain ids on unoccupied cell");
             }
 
-            // Get a new potential Group ID (or the proper edge ID if we're connected to an edge)
-            var newGroupId = EdgeGroup(loc, PlayerAtLoc(loc));
+            // Get a new potential chain ID (or the proper edge ID if we're connected to an edge)
+            var newChainId = NewOrEdgeId(loc, PlayerAtLoc(loc));
             var connections = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
             var ids = connections.Select(c => ChainIds[c.Row, c.Column]).ToArray();
 
             // Okay - we have more than one ID adjacent to us.  We look at all the neighboring
-            // group IDs along with our own.  If we find two different negative values, we've
-            // won.  Otherwise, we take the smallest of the groupcodes ourselves and propogate
+            // chain IDs along with our own.  If we find two different negative values, we've
+            // won.  Otherwise, we take the smallest of the chain codes ourselves and propogate
             // that to all our neighbors.  This means edge codes, which are negative, will get
             // preferentially promulgated.  Otherwise, we'll just use the smallest non-edge code.
             // TODO: minID had ought to take the place of foundNegId below.
             // After all, if minID is negative then it's the only negative value we've found
             // 
-            var foundNegId = newGroupId;        // NonNegative => no negative ID located yet
-            var minId = newGroupId;
+            var foundNegId = newChainId;        // NonNegative => no negative ID located yet
+            var minId = newChainId;
 
             foreach (var id in ids)
             {
@@ -245,7 +245,7 @@ namespace HexLibrary
             // For each ID we eliminate...
             foreach (var idElim in eliminatedIds)
             {
-                // For all stones in the group
+                // For all stones in the chain
                 foreach (var alterLocation in _mapChainIdToLocations[idElim])
                 {
                     // Set the value in the chainID map to the new ID
@@ -299,11 +299,11 @@ namespace HexLibrary
                     // unconnected but we find out during promulgation that the chain is, in fact, connected.
                     // When this happens we have to back up, reset all the previous ID's to the connected ID
                     // and continue on from there.  Check for that case here.
-                    if (!IsEdgeChain(id) && EdgeGroup(neighbor, PlayerAtLoc(neighbor)) != 0)
+                    if (!IsEdgeChain(id) && NewOrEdgeId(neighbor, PlayerAtLoc(neighbor)) != 0)
                     {
                         // TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
                         _mapChainIdToLocations.Remove(id);
-                        id |= EdgeGroup(neighbor, PlayerAtLoc(neighbor));
+                        id |= NewOrEdgeId(neighbor, PlayerAtLoc(neighbor));
                         _mapChainIdToLocations[id] = ourLocList;
                         foreach (var prevLocation in chainLocations)
                         {
@@ -349,7 +349,7 @@ namespace HexLibrary
 
         }
 
-        void TakeInitialSteps(int groupId)
+        void TakeInitialSteps(int chainId)
         {
 
         }
