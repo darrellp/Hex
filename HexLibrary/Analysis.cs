@@ -208,36 +208,44 @@ namespace HexLibrary
             PromulgateId(loc);
         }
 
+        // TODO: Mull over whether we can use disjoint set forest here for promulgation
+        // TODO: Mull over whether we ought to use linked lists rather than normal ones for ID lists
+        // https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+        // I think maybe the disjoint forest thing saves time by not visiting all the
+        // children but we have to visit all the children if we want to update the
+        // ChainId map so maybe it isn't even applicable.  Mull on this.  I think at
+        // best it might save some time by eliminating the AddRange call in PromulgateId.
+        // That might actually be sped up by using linked lists rather than plain lists.
+        
         private void PromulgateId(GridLocation loc)
         {
             var player = PlayerAtLoc(loc);
             var id = ChainId(loc);
 
+            // Get all the Id's we're gonna eliminate
+            var eliminatedIds = new HashSet<int>(
+                Adjacent(loc).
+                Where(l => PlayerAtLoc(l) == player && ChainId(l) != id).
+                Select(ChainId));
+
             var ourLocList = _mapChainIdToLocations[id] = new List<GridLocation>();
-            var queue = new Queue<GridLocation>();
-            queue.Enqueue(loc);
 
-            // We delete all adjacent id lists here since we only have to perform the deletion at the starting
-            // location
-            foreach (var adjLoc in Adjacent(loc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
+            // Add ourselves
+            ourLocList.Add(loc);
+
+            // For each ID we eliminate...
+            foreach (var idElim in eliminatedIds)
             {
-                _mapChainIdToLocations.Remove(ChainId(adjLoc));
-            }
-
-            while (queue.Count != 0)
-            {
-                // Queued locations have the proper chain id.  We just have to promulgate them to neighbors.
-                var curLoc = queue.Dequeue();
-                ourLocList.Add(curLoc);
-
-
-                // For every like colored neighbor which has a different chain id from ours
-                foreach (var neighbor in Adjacent(curLoc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
+                // For all stones in the group
+                foreach (var alterLocation in _mapChainIdToLocations[idElim])
                 {
-                    // Set the proper chain id and queue him up for promulgation
-                    SetChainId(neighbor, id);
-                    queue.Enqueue(neighbor);
+                    // Set the value in the chainID map to the new ID
+                    SetChainId(alterLocation, id);
                 }
+                // Put all the elements in the old list in our new list
+                ourLocList.AddRange(_mapChainIdToLocations[idElim]);
+                // Drop the old list
+                _mapChainIdToLocations.Remove(idElim);
             }
         }
 
@@ -281,8 +289,7 @@ namespace HexLibrary
                     // When promulgating for deletions we can run into a situation where the current ID is
                     // unconnected but we find out during promulgation that the chain is, in fact, connected.
                     // When this happens we have to back up, reset all the previous ID's to the connected ID
-                    // and continue on from there.  This check is the primary difference between PromulgateId()
-                    // and ProulgateIdAfterDelete().  Check for that case here.
+                    // and continue on from there.  Check for that case here.
                     if (!IsEdgeChain(id) && EdgeGroup(neighbor, PlayerAtLoc(neighbor)) != 0)
                     {
                         // TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
@@ -305,8 +312,12 @@ namespace HexLibrary
 
         #region Path determination
         // Based on chapter 8 of "Hex Strategy: Making the Right Connections" by Cameron Browne
-        void DeterminePaths()
+        private void DeterminePaths()
         {
+            if (_board.IsWon)
+            {
+                return;
+            }
             // Make a copy of ourselves to do the analysis in so we don't screw up our chain IDs
             var childAnalysisWhite = new Analysis(this);
             var childAnalysisBlack = new Analysis(this);
@@ -314,11 +325,11 @@ namespace HexLibrary
             childAnalysisBlack.FindPath(PlayerColor.Black);
         }
 
-        void FindPath(PlayerColor player)
+        private void FindPath(PlayerColor player)
         {
             // We maintained the singleton groups during piece placement so the "GenerateChains" and
             // "SingletonGroups" on p. 128 are already done.
-            while (_board.Winner == PlayerColor.Unoccupied)
+            while (!_board.IsWon)
             {
                 TakeAStep();
             }

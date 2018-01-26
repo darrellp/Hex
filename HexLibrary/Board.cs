@@ -21,6 +21,7 @@ namespace HexLibrary
         [DefaultValue(PlayerColor.Unoccupied)]
         internal PlayerColor Winner { get; private set; }
         public Analysis Analysis { get; }
+        public bool IsWon => Winner != PlayerColor.Unoccupied;
         #endregion
 
         #region Private variables
