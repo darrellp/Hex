@@ -58,6 +58,18 @@ namespace HexLibrary
         }
         #endregion
 
+        #region Queries
+        internal List<GridLocation> GroupLocations(int id)
+        {
+            return _mapChainIdToLocations[id];
+        }
+
+        internal int IdAt(GridLocation loc)
+        {
+            return ChainIds[loc.Row, loc.Column];
+        }
+        #endregion
+
         #region Utilities
         internal PlayerColor PlayerAtLoc(GridLocation loc)
         {
@@ -228,7 +240,8 @@ namespace HexLibrary
                 Where(l => PlayerAtLoc(l) == player && ChainId(l) != id).
                 Select(ChainId));
 
-            var ourLocList = _mapChainIdToLocations[id] = new List<GridLocation>();
+            var ourLocList = _mapChainIdToLocations.ContainsKey(id) ? _mapChainIdToLocations[id] : new List<GridLocation>();
+            _mapChainIdToLocations[id] = ourLocList;
 
             // Add ourselves
             ourLocList.Add(loc);

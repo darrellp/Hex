@@ -25,7 +25,7 @@ namespace HexLibrary
         #endregion
 
         #region Private variables
-        private readonly List<GridLocation> _moves = new List<GridLocation>();
+        private readonly List<BoardChange> _moves = new List<BoardChange>();
         #endregion
 
         #region Constructor
@@ -53,19 +53,28 @@ namespace HexLibrary
             Analysis.Clear();
         }
 
-        public GridLocation Undo()
+        public BoardChange Undo()
         {
             if (_moves.Count == 0)
             {
-                return GridLocation.Nowhere();
+                return BoardChange.NullChange();
             }
-            var lastLocation = _moves[_moves.Count - 1];
+            var change = _moves[_moves.Count - 1];
             _moves.RemoveAt(_moves.Count - 1);
-            Players[lastLocation.Row, lastLocation.Column] = PlayerColor.Unoccupied;
-            ChangePlayer();
-            Analysis.RemoveStone(lastLocation, CurPlayer);
+
+            change.Undo(this);
             Winner = PlayerColor.Unoccupied;
-            return lastLocation;
+            return change;
+        }
+
+        public void RemoveStone(GridLocation loc, bool undoable = true)
+        {
+            if (undoable)
+            {
+                _moves.Add(new BoardChange(loc, CurPlayer, false, Players[loc.Row, loc.Column]));
+            }
+            Players[loc.Row, loc.Column] = PlayerColor.Unoccupied;
+            Analysis.RemoveStone(loc, CurPlayer);
         }
 
         public void SetWinner(PlayerColor player)
@@ -75,7 +84,7 @@ namespace HexLibrary
         #endregion
 
         #region Event handlers
-        internal void PlaceStone(GridLocation loc, PlayerColor player)
+        internal void PlaceStone(GridLocation loc, PlayerColor player, bool undoable = true)
         {
             if (Winner != PlayerColor.Unoccupied)
             {
@@ -89,7 +98,10 @@ namespace HexLibrary
             }
             Players[loc.Row, loc.Column] = player;
             Analysis.PlaceStone(loc, player);
-            _moves.Add(loc);
+            if (undoable)
+            {
+                _moves.Add(new BoardChange(loc, CurPlayer));
+            }
         }
 
         public void Clicked(GridLocation loc)
@@ -105,9 +117,13 @@ namespace HexLibrary
             return Players[loc.Row, loc.Column];
         }
 
-        private void ChangePlayer()
+        internal void ChangePlayer(PlayerColor to = PlayerColor.Unoccupied)
         {
-            CurPlayer = CurPlayer == PlayerColor.Black ? PlayerColor.White : PlayerColor.Black;
+            if (to == PlayerColor.Unoccupied)
+            {
+                to = CurPlayer == PlayerColor.Black ? PlayerColor.White : PlayerColor.Black;
+            }
+            CurPlayer = to;
         }
 
         private static readonly GridLocation[] Offsets = new[]

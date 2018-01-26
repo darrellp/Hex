@@ -116,10 +116,10 @@ namespace Hex
 
 	    public void Undo()
 	    {
-	        var undoLoc = _board.Undo();
-	        if (!undoLoc.IsNowhere)
+	        var undoChange = _board.Undo();
+	        if (!undoChange.IsNull())
 	        {
-	            DrawStone(undoLoc, PlayerColor.Unoccupied);
+	            DrawStone(undoChange.Location, PlayerColor.Unoccupied);
 	        }
 
         }

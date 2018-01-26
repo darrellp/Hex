@@ -42,6 +42,7 @@
   <ItemGroup>
     <Compile Include="Analysis.cs" />
     <Compile Include="Board.cs" />
+    <Compile Include="BoardChange.cs" />
     <Compile Include="GridLocation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
