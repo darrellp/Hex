@@ -139,8 +139,8 @@
         internal bool Fit(int side, int offset, Board board)
         {
             var colInc = colIncs[side];
-            var start = sideStarts[side] + offset * colInc;
-            var rowInc = new GridLocation(1, 1) - colInc;
+            var start = (board.Size - 1) * sideStarts[side] + offset * colInc;
+            var rowInc = (side == 2 || side == 3 ? -1 : 1) * (new GridLocation(1, 1) - colInc);
             var player = side == 0 || side == 2 ? PlayerColor.Black : PlayerColor.White;
 
             for (var iRow = 0; iRow < _depth; iRow++)
