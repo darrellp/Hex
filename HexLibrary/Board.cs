@@ -71,9 +71,9 @@ namespace HexLibrary
         {
             if (undoable)
             {
-                _moves.Add(new BoardChange(loc, CurPlayer, false, Players[loc.Row, loc.Column]));
+                _moves.Add(new BoardChange(loc, CurPlayer, false, this[loc]));
             }
-            Players[loc.Row, loc.Column] = PlayerColor.Unoccupied;
+            this[loc] = PlayerColor.Unoccupied;
             Analysis.RemoveStone(loc, CurPlayer);
         }
 
@@ -84,6 +84,12 @@ namespace HexLibrary
         #endregion
 
         #region Event handlers
+
+        internal void PlaceStone(int row, int col, PlayerColor player, bool undoable = true)
+        {
+            PlaceStone(new GridLocation(row, col), player, undoable);
+        }
+
         internal void PlaceStone(GridLocation loc, PlayerColor player, bool undoable = true)
         {
             if (Winner != PlayerColor.Unoccupied)
@@ -91,12 +97,12 @@ namespace HexLibrary
                 // The game is over
                 return;
             }
-            var curState = Players[loc.Row, loc.Column];
+            var curState = this[loc];
             if (curState != PlayerColor.Unoccupied)
             {
                 return;
             }
-            Players[loc.Row, loc.Column] = player;
+            this[loc] = player;
             Analysis.PlaceStone(loc, player);
             if (undoable)
             {
@@ -112,9 +118,18 @@ namespace HexLibrary
         #endregion
 
         #region Utilities
-        internal PlayerColor Player(GridLocation loc)
+
+        internal PlayerColor this[int row, int col]
         {
-            return Players[loc.Row, loc.Column];
+            get => Players[row, col];
+            private set => Players[row, col] = value;
+        }
+
+        internal PlayerColor this[GridLocation l]
+        {
+            get => Players[l.Row, l.Column];
+            private set => Players[l.Row, l.Column] = value;
+
         }
 
         internal void ChangePlayer(PlayerColor to = PlayerColor.Unoccupied)
@@ -168,7 +183,7 @@ namespace HexLibrary
                 yield break;
             }
 
-            var player = Player(loc);
+            var player = this[loc];
             if (player == PlayerColor.Unoccupied)
             {
                 yield break;
@@ -195,11 +210,11 @@ namespace HexLibrary
                 return false;
             }
 
-            var playerAtLoc = Player(loc + bridgeOffset.Location);
+            var playerAtLoc = this[loc + bridgeOffset.Location];
 
             return (playerAtLoc == PlayerColor.Unoccupied || includeFriendlyOccupied && player == playerAtLoc) &&
-                   Player(loc + bridgeOffset.Support1) == PlayerColor.Unoccupied &&
-                   Player(loc + bridgeOffset.Support2) == PlayerColor.Unoccupied;
+                   this[loc + bridgeOffset.Support1] == PlayerColor.Unoccupied &&
+                   this[loc + bridgeOffset.Support2] == PlayerColor.Unoccupied;
 
         }
 

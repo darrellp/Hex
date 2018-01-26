@@ -19,7 +19,11 @@
 
         public override string ToString()
         {
-            return $"{(char)('A' + Row)}{Column + 1}";
+#if TRADITIONAL
+			return $"{(char)('A' + Row)}{Column + 1}";
+#else
+	        return $"({Row}, {Column})";
+#endif
         }
 
         public static GridLocation operator +(GridLocation loc1, GridLocation loc2)
@@ -30,6 +34,11 @@
         public static GridLocation operator -(GridLocation loc1, GridLocation loc2)
         {
             return new GridLocation(loc1.Row - loc2.Row, loc1.Column - loc2.Column);
+        }
+
+        public static GridLocation operator *(int scalar, GridLocation loc)
+        {
+            return new GridLocation(scalar * loc.Row, scalar * loc.Column);
         }
 
         internal bool IsValid(int size)
@@ -49,6 +58,26 @@
         public override int GetHashCode()
         {
             return Row + (Column << 5);
+        }
+
+        public static bool operator ==(GridLocation l1, GridLocation l2)
+        {
+            return l1.Row == l2.Row && l1.Column == l2.Column;
+        }
+
+        public static bool operator !=(GridLocation l1, GridLocation l2)
+        {
+            return l1.Row != l2.Row || l1.Column != l2.Column;
+        }
+
+        public override bool Equals(object obj)
+        {
+            // Check for null values and compare run-time types.
+            if (obj == null || GetType() != obj.GetType())
+                return false;
+
+            var l = (GridLocation)obj;
+            return Row == l.Row && Column == l.Column;
         }
     }
 }

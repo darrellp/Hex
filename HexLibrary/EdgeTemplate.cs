@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace HexLibrary
+﻿namespace HexLibrary
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     /// <summary>   An edge template. </summary>
@@ -22,25 +16,15 @@ namespace HexLibrary
     ////////////////////////////////////////////////////////////////////////////////////////////////////
     class EdgeTemplate
     {
-        private int _depth;
-        private int[] _plyWidths;
-        private int[] _plyOffsets;
-        private int _connectStoneOffset;
-        private GridLocation _dontCare;
+        #region Private variables
+        private readonly int _depth;
+        private readonly int[] _plyWidths;
+        private readonly int[] _plyOffsets;
+        private readonly int _connectStoneOffset;
+        private readonly GridLocation _dontCare;
+        #endregion
 
-        public EdgeTemplate(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset, GridLocation dontCare)
-        {
-            _depth = depth;
-            _plyWidths = plyWidths;
-            _plyOffsets = plyOffsets;
-            _connectStoneOffset = connectStoneOffset;
-            _dontCare = dontCare;
-        }
-
-        public EdgeTemplate(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset) :
-            this(depth, plyWidths, plyOffsets, connectStoneOffset, GridLocation.Nowhere())
-        { }
-
+        #region Templates
         internal static EdgeTemplate[] EdgeTemplates =
         {
             // Single piece on the edge
@@ -106,5 +90,82 @@ namespace HexLibrary
                 new [] {0, 0, 1, 1},
                 1),
         };
+        #endregion
+
+        #region Constructor
+        public EdgeTemplate(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset, GridLocation dontCare)
+        {
+            _depth = depth;
+            _plyWidths = plyWidths;
+            _plyOffsets = plyOffsets;
+            _connectStoneOffset = connectStoneOffset;
+            _dontCare = dontCare;
+        }
+
+        public EdgeTemplate(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset) :
+            this(depth, plyWidths, plyOffsets, connectStoneOffset, GridLocation.Nowhere())
+        { }
+        #endregion
+
+        #region Fitting
+
+        static readonly GridLocation[] sideStarts = new[]
+        {
+            new GridLocation(0, 0),
+            new GridLocation(1, 0),
+            new GridLocation(0, 1),
+            new GridLocation(0, 0),
+        };
+
+        private static readonly GridLocation[] colIncs = new[]
+        {
+            new GridLocation(1, 0),
+            new GridLocation(0, 1),
+            new GridLocation(1, 0),
+            new GridLocation(0, 1),
+        };
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        ///  <summary>   Fits. </summary>
+        /// 
+        ///  <remarks>   The sides are numbered as follows for the "side" parameter
+        ///              Darrell Plank, 1/26/2018. </remarks>
+        /// 
+        ///  <param name="side">     The side to fit on. </param>
+        ///  <param name="offset">   The offset on that side. </param>
+        /// <param name="board">     The board we're fitting on. </param>
+        /// <returns>   True if it succeeds, false if it fails. </returns>
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        internal bool Fit(int side, int offset, Board board)
+        {
+            var colInc = colIncs[side];
+            var start = sideStarts[side] + offset * colInc;
+            var rowInc = new GridLocation(1, 1) - colInc;
+            var player = side == 0 || side == 2 ? PlayerColor.Black : PlayerColor.White;
+
+            for (var iRow = 0; iRow < _depth; iRow++)
+            {
+                start += _plyOffsets[iRow] * colInc;
+                var cur = start;
+                for (var iCol = 0; iCol < _plyWidths[iRow]; iCol++)
+                {
+                    if (new GridLocation(iRow, iCol) != _dontCare)
+                    {
+						var expected = iRow == _depth - 1 && iCol == _connectStoneOffset
+							? player
+							: PlayerColor.Unoccupied;
+						if (board[cur] != expected)
+						{
+							return false;
+						}
+                    }
+                    cur += colInc;
+                }
+                start += rowInc;
+            }
+
+            return true;
+        }
+        #endregion
     }
 }

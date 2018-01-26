@@ -54,7 +54,7 @@ namespace HexLibrary
         {
             return player == PlayerColor.Unoccupied ?
                 _mapChainIdToLocations.Count :
-                _mapChainIdToLocations.Count(entry => _board.Player(entry.Value[0]) == player);
+                _mapChainIdToLocations.Count(entry => _board[entry.Value[0]] == player);
         }
         #endregion
 
@@ -71,11 +71,6 @@ namespace HexLibrary
         #endregion
 
         #region Utilities
-        internal PlayerColor PlayerAtLoc(GridLocation loc)
-        {
-            return _board.Players[loc.Row, loc.Column];
-        }
-
         private static readonly GridLocation[] Offsets = new[]
         {
             new GridLocation( 1, -1),
@@ -180,8 +175,8 @@ namespace HexLibrary
             }
 
             // Get a new potential chain ID (or the proper edge ID if we're connected to an edge)
-            var newChainId = NewOrEdgeId(loc, PlayerAtLoc(loc));
-            var connections = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
+            var newChainId = NewOrEdgeId(loc, _board[loc]);
+            var connections = Adjacent(loc).Where(l => _board[l] == player).ToArray();
             var ids = connections.Select(c => ChainIds[c.Row, c.Column]).ToArray();
 
             // Okay - we have more than one ID adjacent to us.  We look at all the neighboring
@@ -227,13 +222,13 @@ namespace HexLibrary
         
         private void PromulgateId(GridLocation loc)
         {
-            var player = PlayerAtLoc(loc);
+            var player = _board[loc];
             var id = ChainId(loc);
 
             // Get all the Id's we're gonna eliminate
             var eliminatedIds = new HashSet<int>(
                 Adjacent(loc).
-                Where(l => PlayerAtLoc(l) == player && ChainId(l) != id).
+                Where(l => _board[l] == player && ChainId(l) != id).
                 Select(ChainId));
 
             var ourLocList = _mapChainIdToLocations.ContainsKey(id) ? _mapChainIdToLocations[id] : new List<GridLocation>();
@@ -264,7 +259,7 @@ namespace HexLibrary
             // We're gonna totally lose the old ID
             _mapChainIdToLocations.Remove(oldId);
             SetChainId(loc, 0);
-            var checks = Adjacent(loc).Where(l => PlayerAtLoc(l) == player).ToArray();
+            var checks = Adjacent(loc).Where(l => _board[l] == player).ToArray();
 
             GridLocation[] nextLocations;
             while ((nextLocations = checks.Where(l => ChainId(l) == oldId).ToArray()).Length > 0)
@@ -279,7 +274,7 @@ namespace HexLibrary
 
         private void PromulgateIdAfterDelete(GridLocation loc)
         {
-            var player = PlayerAtLoc(loc);
+            var player = _board[loc];
             var id = ChainId(loc);
             var queue = new Queue<GridLocation>();
             var ourLocList = _mapChainIdToLocations[id];
@@ -293,17 +288,17 @@ namespace HexLibrary
                 ourLocList.Add(curLoc);
 
                 // For every like colored neighbor which has a different chain id from ours
-                foreach (var neighbor in Adjacent(curLoc).Where(l => PlayerAtLoc(l) == player && ChainId(l) != id))
+                foreach (var neighbor in Adjacent(curLoc).Where(l => _board[l] == player && ChainId(l) != id))
                 {
                     // When promulgating for deletions we can run into a situation where the current ID is
                     // unconnected but we find out during promulgation that the chain is, in fact, connected.
                     // When this happens we have to back up, reset all the previous ID's to the connected ID
                     // and continue on from there.  Check for that case here.
-                    if (!IsEdgeChain(id) && NewOrEdgeId(neighbor, PlayerAtLoc(neighbor)) != 0)
+                    if (!IsEdgeChain(id) && NewOrEdgeId(neighbor, _board[neighbor]) != 0)
                     {
                         // TODO: Can I use chainLocations here?  Can I just set _mapChainIdToLocations using it when it's all done?
                         _mapChainIdToLocations.Remove(id);
-                        id |= NewOrEdgeId(neighbor, PlayerAtLoc(neighbor));
+                        id |= NewOrEdgeId(neighbor, _board[neighbor]);
                         _mapChainIdToLocations[id] = ourLocList;
                         foreach (var prevLocation in chainLocations)
                         {

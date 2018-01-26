@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BoardTest.cs" />
+    <Compile Include="EdgeTemplateTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ChainTest.cs" />
     <Compile Include="Utilities.cs" />
