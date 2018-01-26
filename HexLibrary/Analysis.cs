@@ -50,7 +50,7 @@ namespace HexLibrary
             CheckIdsOnRemoval(loc, player);
         }
 
-        public int ChainCount(PlayerColor player)
+        public int ChainCount(PlayerColor player = PlayerColor.Unoccupied)
         {
             return player == PlayerColor.Unoccupied ?
                 _mapChainIdToLocations.Count :
@@ -101,19 +101,15 @@ namespace HexLibrary
 
         #region Chain IDs
         // Chain IDs are just successive integers except for ones meeting winning edges which are
-        // negative with the high bits being 11000, 10100, 10010, 10001 starting from upper left and
-        // going clockwise respectively.  These IDs will only be applied for chains of the proper
-        // color - i.e., a white stone on a black side will receive a normal chain ID and vice
-        // versa.  These upper bits will be paired with a normal lower set of bits - i.e., the
-        // next successive chain ID.  This is to distinguish between different chains both
-        // adjacent to a winning edge.
+        // negative with the values below.  Any groups connected to an edge are considered to be
+        // part of one large group
         // 
         // High Bits/Sides:
         //           /\
-        //  10001/0 /  \ 10010/1
+        //       -1 /  \ -2
         //         /    \
         //         \    /
-        //  11000/3 \  / 10100/2
+        //       -4 \  / -3
         //           \/
         private int _nextChainId = 1;
 

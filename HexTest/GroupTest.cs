@@ -22,7 +22,7 @@ namespace HexTest
         }
 
         [TestMethod]
-        public void TestEdgeAmalgamation()
+        public void TestAmalgamation()
         {
             var board = new Board();
             var loc1 = new GridLocation(6, 6);
@@ -56,6 +56,49 @@ namespace HexTest
             locs.Count.ShouldBe(1);
             locs[0].ShouldBe(loc3);
             board.Analysis.ChainCount(PlayerColor.White).ShouldBe(2);
+        }
+
+        [TestMethod]
+        public void TestEdgeIds()
+        {
+            var board = new Board();
+            var loc1 = new GridLocation(0, 0);
+            var loc2 = new GridLocation(10, 0);
+            var loc3 = new GridLocation(10, 10);
+            var loc4 = new GridLocation(0, 10);
+
+            board.PlaceStone(loc1, PlayerColor.White);
+            board.Analysis.IdAt(loc1).ShouldBe(-4);
+            board.RemoveStone(loc1);
+            board.Analysis.ChainCount().ShouldBe(0);
+            board.PlaceStone(loc1, PlayerColor.Black);
+            board.Analysis.IdAt(loc1).ShouldBe(-1);
+            board.RemoveStone(loc1);
+
+            board.PlaceStone(loc2, PlayerColor.White);
+            board.Analysis.IdAt(loc2).ShouldBe(-2);
+            board.RemoveStone(loc2);
+            board.Analysis.ChainCount().ShouldBe(0);
+            board.PlaceStone(loc2, PlayerColor.Black);
+            board.Analysis.IdAt(loc2).ShouldBe(-1);
+            board.RemoveStone(loc2);
+
+            board.PlaceStone(loc3, PlayerColor.White);
+            board.Analysis.IdAt(loc3).ShouldBe(-2);
+            board.RemoveStone(loc3);
+            board.Analysis.ChainCount().ShouldBe(0);
+            board.PlaceStone(loc3, PlayerColor.Black);
+            board.Analysis.IdAt(loc3).ShouldBe(-3);
+            board.RemoveStone(loc3);
+
+            board.PlaceStone(loc4, PlayerColor.White);
+            board.Analysis.IdAt(loc4).ShouldBe(-4);
+            board.RemoveStone(loc4);
+            board.Analysis.ChainCount().ShouldBe(0);
+            board.PlaceStone(loc4, PlayerColor.Black);
+            board.Analysis.IdAt(loc4).ShouldBe(-3);
+            board.RemoveStone(loc4);
+
         }
     }
 }
