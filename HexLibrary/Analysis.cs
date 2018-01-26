@@ -119,7 +119,7 @@ namespace HexLibrary
 
         private int NextId()
         {
-            return _nextChainId++;
+            return ++_nextChainId;
         }
 
         private int ChainId(GridLocation loc)

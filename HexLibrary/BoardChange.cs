@@ -36,6 +36,7 @@
 
         internal void Undo(Board board)
         {
+            board.ChangePlayer(OldPlayer);
             if (IsPlacement)
             {
                 board.RemoveStone(Location, false);
@@ -44,8 +45,6 @@
             {
                 board.PlaceStone(Location, StoneColor, false);
             }
-
-            board.ChangePlayer(OldPlayer);
         }
     }
 }
