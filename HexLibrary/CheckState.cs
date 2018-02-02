@@ -184,17 +184,22 @@ namespace HexLibrary
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
-        /// <summary>   Eliminate templates missing a connecting stone. </summary>
-        ///
-        /// <remarks>   Eliminate any templates that require a connecting stone where we've found an
-        ///             unoccupied cell. Darrell Plank, 1/30/2018. </remarks>
-        ///
-        /// <exception cref="InvalidOperationException">    Thrown when the requested operation is
-        ///                                                 invalid. </exception>
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        private void EliminateConnectingStone()
-        {
-            switch (_row)
+	    /// <summary>   Eliminate templates missing a connecting stone. </summary>
+	    ///
+	    /// <remarks>   Eliminate any templates that require a connecting stone where we've found an
+	    ///             unoccupied cell. Darrell Plank, 1/30/2018. </remarks>
+	    ///
+	    /// <exception cref="InvalidOperationException">    Thrown when the requested operation is
+	    ///                                                 invalid. </exception>
+	    ////////////////////////////////////////////////////////////////////////////////////////////////////
+	    private void EliminateConnectingStone(int row = -1)
+	    {
+		    if (row < 0)
+		    {
+			    row = _row;
+		    }
+
+            switch (row)
             {
                 case 0:
                     break;
@@ -327,7 +332,12 @@ namespace HexLibrary
                     TmplSetsToHeights[masks[i]] = htList;
                 }
 
-                ret = Math.Max(ret, TmplSetsToHeights[masks[i]][tcol - i]);
+	            var list = TmplSetsToHeights[masks[i]];
+	            var index = tcol - i;
+	            if (list.Count > index && list[index] > ret)
+	            {
+		            ret = list[index];
+	            }
             }
 
             return ret;
@@ -377,6 +387,7 @@ namespace HexLibrary
 
 	        if (_row == 1)
 	        {
+				// No IVc three columns back
 				Eliminate(-3, IVcM);
 	        }
 
@@ -396,26 +407,33 @@ namespace HexLibrary
 
         internal void ProcessUnfriendly(List<EdgeTemplateConnection> ret)
         {
-            // Could this be the don't care of template IIIc?
-            if (_row == 0 && _tCol >= 2 && (_maskQueue[_tCol - 2] & IIIcM) != 0)
-            {
-                // Yes - that's the only template possible.  Advance our position to
-				// account for this specific template
-				AdvanceTo(-2);
-                _maskQueue[0] = IIIcM;
-                _maskQueue[1] = _maskQueue[2] = 0;
-	            ++_row;
-	            return;
-            }
-			else if (_row == 1 && _tCol >= 3 && (_maskQueue[_tCol - 3] & IVcM) != 0)
-            {
-				// Possible don't care of template IVc?
-				AdvanceTo(-3);
-	            _maskQueue[0] = IVcM;
-	            _maskQueue[1] = _maskQueue[2] = _maskQueue[3] = 0;
-	            ++_row;
-	            return;
-            }
+			// If it's unfriendly, it's not our connecting stone nor is anything above it
+	        for (var iRow = _row; iRow < ColumnHeight(_tCol, _maskQueue); iRow++)
+	        {
+				EliminateConnectingStone(iRow);
+	        }
+
+			// Check out don't care cases
+			switch (_row)
+			{
+				case 0 when _tCol >= 2 && (_maskQueue[_tCol - 2] & IIIcM) != 0:
+					// IIIc is the only template possible.  Advance our position to
+					// account for this specific template
+					AdvanceTo(-2);
+					_maskQueue[0] = IIIcM;
+					_maskQueue[1] = _maskQueue[2] = 0;
+					++_row;
+					return;
+
+				case 1 when _tCol >= 3 && (_maskQueue[_tCol - 3] & IVcM) != 0:
+					// We're on don't care of IVc. Advance our position to
+					// account for this specific template
+					AdvanceTo(-3);
+					_maskQueue[0] = IVcM;
+					_maskQueue[1] = _maskQueue[2] = _maskQueue[3] = 0;
+					++_row;
+					return;
+			}
 
 			// Anywhere but the above don't care cases invalidates all templates it might
 			// participate in.
@@ -485,7 +503,7 @@ namespace HexLibrary
 	        }
 		}
 
-        internal void ProcessFriendly(List<EdgeTemplateConnection> ret)
+		internal void ProcessFriendly(List<EdgeTemplateConnection> ret)
         {
             // Found a connecting stone.  Result depends on row
             switch (_row)
@@ -500,6 +518,7 @@ namespace HexLibrary
 					// current position.  _pCol must be advanced to the point where we found the stone
 					// by adding _tCol to it and _tCol must be zero.  The AdvanceColumn at the bottom
 					// will then move us past the stone.
+					
                     _maskQueue.Clear();
 					_maskQueue.Queue(0);
 	                _pCol += _tCol;
@@ -507,7 +526,6 @@ namespace HexLibrary
                     break;
 
                 case 1:
-                    // Potential II
                     AdvanceTo(0);
                     _maskQueue[0] = IIM;
                     break;
@@ -519,14 +537,14 @@ namespace HexLibrary
                     break;
 
                 case 3:
-	                AllowOnly(-1, IVa);
-					AllowOnly(-2, IVb | IVc);
+	                AllowOnly(-1, IVaM);
+					AllowOnly(-2, IVbM | IVcM);
 					CheckMask();
 	                break;
 
 				case 4:
-					AllowOnly(-2, Va);
-					AllowOnly(-3, Vb);
+					AllowOnly(-2, VaM);
+					AllowOnly(-3, VbM);
 					CheckMask();
 					break;
 
@@ -537,5 +555,5 @@ namespace HexLibrary
 	        AdvanceColumn();
         }
 
-    }
+	}
 }

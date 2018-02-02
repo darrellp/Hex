@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using HexLibrary;
 using Shouldly;
 using static HexTest.Utilities;
+// ReSharper disable InconsistentNaming
 
 
 namespace HexTest
@@ -10,7 +12,7 @@ namespace HexTest
     [TestClass]
     public class EdgeTemplateTest
     {
-        private Board board = new Board();
+        private readonly Board board = new Board();
 
         [TestMethod]
         public void TestFit()
@@ -66,9 +68,58 @@ namespace HexTest
 	    public void TestTypeIII()
 	    {
 		    board.PlaceStone(2, 1, PlayerColor.White);
+			var templates = EdgeTemplateCheck.Check(board, 3);
+			templates.Count.ShouldBe(2);
+			IsPermutation(templates.Select(v => v.Location).ToArray(), ToLocs(2, 1, 2, 1)).ShouldBeTrue();
+			IsPermutation(templates.Select(v => v.TemplateType).ToArray(), new[] { CheckState.IIIa, CheckState.IIIb }).ShouldBeTrue();
+
+			// Placing a black at (0, 2) should force us to recognize a IIIc
+			board.PlaceStone(0, 2, PlayerColor.Black);
+			templates = EdgeTemplateCheck.Check(board, 3);
+			templates.Count.ShouldBe(1);
+			templates[0].Location.ShouldBe(new GridLocation(2, 1));
+			templates[0].TemplateType.ShouldBe(CheckState.IIIc);
+
+			// Placing a black one two to the right should still be okay
+			board.PlaceStone(2, 3, PlayerColor.Black);
+		    templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(1);
+		    templates[0].Location.ShouldBe(new GridLocation(2, 1));
+		    templates[0].TemplateType.ShouldBe(CheckState.IIIc);
+
+			// But putting it one away should eliminate it
+		    board.PlaceStone(2, 2, PlayerColor.Black);
+		    templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(0);
+	    }
+
+	    [TestMethod]
+	    public void TestTypeIV()
+	    {
+		    board.PlaceStone(3, 2, PlayerColor.White);
 		    var templates = EdgeTemplateCheck.Check(board, 3);
 		    templates.Count.ShouldBe(2);
-		    IsPermutation(templates.Select(v => v.Location).ToArray(), ToLocs(2, 1, 2, 1)).ShouldBeTrue();
+		    IsPermutation(templates.Select(v => v.Location).ToArray(), ToLocs(3, 2, 3, 2)).ShouldBeTrue();
+		    IsPermutation(templates.Select(v => v.TemplateType).ToArray(), new[] { CheckState.IVa, CheckState.IVb }).ShouldBeTrue();
+
+		    // Placing a black at (1, 3) should force us to recognize a IVc
+		    board.PlaceStone(1, 3, PlayerColor.Black);
+		    templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(1);
+		    templates[0].Location.ShouldBe(new GridLocation(3, 2));
+		    templates[0].TemplateType.ShouldBe(CheckState.IVc);
+
+		    // Placing a black one two to the right should still be okay
+		    board.PlaceStone(3, 4, PlayerColor.Black);
+		    templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(1);
+		    templates[0].Location.ShouldBe(new GridLocation(3, 2));
+		    templates[0].TemplateType.ShouldBe(CheckState.IVc);
+
+		    // But putting it one away should eliminate it
+		    board.PlaceStone(3, 3, PlayerColor.Black);
+		    templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(0);
 	    }
 	}
 }
