@@ -17,75 +17,158 @@
     class EdgeTemplate
     {
         #region Private variables
-        private readonly int _depth;
-        private readonly int[] _plyWidths;
-        private readonly int[] _plyOffsets;
-        private readonly int _connectStoneOffset;
-        private readonly GridLocation _dontCare;
+
+        internal int[] ColumnHeights { get; }
+        internal int ConnectStoneColumn { get; }
+        internal GridLocation DontCare { get; }
+
         #endregion
 
         #region Templates
         internal static EdgeTemplate[] EdgeTemplates =
         {
             // Single piece on the edge
-            new EdgeTemplate(1, 
+            new EdgeTemplate(
+                new[] {1},
+                0),
+
+            // One row off the edge
+            new EdgeTemplate(
+                new[] {2, 1},
+                0),
+
+            // Three rows
+            // IIIA
+            new EdgeTemplate(
+                new[] {3, 3, 2, 1},
+                0),
+
+            // IIIB
+            new EdgeTemplate(
+                new[] {3, 3, 2, 1},
+                1),
+
+            // IIIC
+            new EdgeTemplate(
+                new[] {3, 3, 3, 2, 1},
+                1, new GridLocation(0, 2)),
+
+            // Four Rows
+            // IVA
+            new EdgeTemplate(
+                new[] {3, 4, 4, 3, 3, 2, 1},
+                1),
+
+            // IVB
+            new EdgeTemplate(
+                new[] {3, 4, 4, 3, 3, 2, 1},
+                2),
+
+            // IVC
+            new EdgeTemplate(
+                new[] {3, 4, 4, 4, 3, 3, 2, 1},
+                2, new GridLocation(1, 3)),
+
+            // Five Rows
+            // VA
+            new EdgeTemplate(
+                new[] {3, 5, 5, 5, 4, 4, 3, 3, 2, 1},
+                2),
+
+            // VB
+            new EdgeTemplate(
+                new[] {3, 4, 5, 5, 5, 4, 3, 3, 2, 1},
+                3),
+        };
+        #endregion
+
+        public EdgeTemplate(int[] columnHeights, int connectStoneColumn, GridLocation dontCare)
+        {
+            ColumnHeights = columnHeights;
+            ConnectStoneColumn = connectStoneColumn;
+            DontCare = dontCare;
+        }
+
+        public EdgeTemplate(int[] columnHeights, int connectStoneColumn) : this(columnHeights, connectStoneColumn,
+            GridLocation.Nowhere())
+        {
+        }
+    }
+
+    class EdgeTemplateOld
+    {
+        #region Private variables
+
+        internal int Depth { get; }
+        internal int[] PlyWidths { get; }
+        internal int[] PlyOffsets { get; }
+        internal int ConnectStoneOffset { get; }
+        internal GridLocation DontCare { get; }
+
+        #endregion
+
+        #region Templates
+        internal static EdgeTemplateOld[] EdgeTemplatesOld =
+        {
+            // Single piece on the edge
+            new EdgeTemplateOld(1, 
                 new [] {1},
                 new [] {0},
                 0),
 
             // One row off the edge
-            new EdgeTemplate(2,
+            new EdgeTemplateOld(2,
                 new [] {2, 1},
                 new [] {0, 0},
                 0),
 
             // Three rows
             // IIIA
-            new EdgeTemplate(3,
+            new EdgeTemplateOld(3,
                 new [] {4, 3, 2},
                 new [] {0, 0, 0},
                 0),
 
             // IIIA
-            new EdgeTemplate(3,
+            new EdgeTemplateOld(3,
                 new [] {4, 3, 2},
                 new [] {0, 0, 0},
                 1),
 
             // IIIC
-            new EdgeTemplate(3,
+            new EdgeTemplateOld(3,
                 new [] {5, 4, 3},
                 new [] {0, 0, 0},
                 1, new GridLocation(0, 2)),
 
             // Four Rows
             // IVA
-            new EdgeTemplate(4,
+            new EdgeTemplateOld(4,
                 new [] {7, 6, 5, 2},
                 new [] {0, 0, 0, 1},
                 0),
 
             // IVB
-            new EdgeTemplate(4,
+            new EdgeTemplateOld(4,
                 new [] {7, 6, 5, 2},
                 new [] {0, 0, 0, 1},
                 1),
 
             // IVC
-            new EdgeTemplate(4,
+            new EdgeTemplateOld(4,
                 new [] {8, 7, 6, 3},
                 new [] {0, 0, 0, 1},
                 1, new GridLocation(1, 3)),
 
             // Five Rows
             // VA
-            new EdgeTemplate(5,
+            new EdgeTemplateOld(5,
                 new [] {10, 9, 8, 5, 3},
                 new [] {0, 0, 1, 0},
                 1),
         
             // VB
-            new EdgeTemplate(5,
+            new EdgeTemplateOld(5,
                 new [] {10, 9, 8, 5, 3},
                 new [] {0, 0, 1, 1},
                 1),
@@ -93,16 +176,16 @@
         #endregion
 
         #region Constructor
-        public EdgeTemplate(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset, GridLocation dontCare)
+        public EdgeTemplateOld(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset, GridLocation dontCare)
         {
-            _depth = depth;
-            _plyWidths = plyWidths;
-            _plyOffsets = plyOffsets;
-            _connectStoneOffset = connectStoneOffset;
-            _dontCare = dontCare;
+            Depth = depth;
+            PlyWidths = plyWidths;
+            PlyOffsets = plyOffsets;
+            ConnectStoneOffset = connectStoneOffset;
+            DontCare = dontCare;
         }
 
-        public EdgeTemplate(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset) :
+        public EdgeTemplateOld(int depth, int[] plyWidths, int[] plyOffsets, int connectStoneOffset) :
             this(depth, plyWidths, plyOffsets, connectStoneOffset, GridLocation.Nowhere())
         { }
         #endregion
@@ -143,15 +226,15 @@
             var rowInc = (side == 2 || side == 3 ? -1 : 1) * (new GridLocation(1, 1) - colInc);
             var player = side == 0 || side == 2 ? PlayerColor.Black : PlayerColor.White;
 
-            for (var iRow = 0; iRow < _depth; iRow++)
+            for (var iRow = 0; iRow < Depth; iRow++)
             {
-                start += _plyOffsets[iRow] * colInc;
+                start += PlyOffsets[iRow] * colInc;
                 var cur = start;
-                for (var iCol = 0; iCol < _plyWidths[iRow]; iCol++)
+                for (var iCol = 0; iCol < PlyWidths[iRow]; iCol++)
                 {
-                    if (new GridLocation(iRow, iCol) != _dontCare)
+                    if (new GridLocation(iRow, iCol) != DontCare)
                     {
-						var expected = iRow == _depth - 1 && iCol == _connectStoneOffset
+						var expected = iRow == Depth - 1 && iCol == ConnectStoneOffset
 							? player
 							: PlayerColor.Unoccupied;
 						if (board[cur] != expected)
