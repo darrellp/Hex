@@ -14,18 +14,6 @@ namespace HexTest
         private readonly Board board = new Board();
 
         [TestMethod]
-        public void TestFit()
-        {
-            board.PlaceStone(1, 4, PlayerColor.Black);
-            board.PlaceStone(3, 3, PlayerColor.White); 
-            EdgeTemplateOld.EdgeTemplatesOld[7].Fit(3, 1, board).ShouldBeTrue();
-	        board.Clear();
-	        board.PlaceStone(4, 1, PlayerColor.White);
-	        board.PlaceStone(3, 3, PlayerColor.Black);
-	        EdgeTemplateOld.EdgeTemplatesOld[7].Fit(0, 1, board).ShouldBeTrue();
-        }
-
-        [TestMethod]
         public void TestEmptyCheck()
         {
             EdgeTemplateCheck.Check(board, 0).Count.ShouldBe(0);

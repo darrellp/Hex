@@ -46,7 +46,6 @@
     <Compile Include="Board.cs" />
     <Compile Include="BoardChange.cs" />
     <Compile Include="CheckState.cs" />
-    <Compile Include="CircularQueue.cs" />
     <Compile Include="EdgeTemplate.cs" />
     <Compile Include="EdgeTemplateCheck.cs" />
     <Compile Include="GridLocation.cs" />
