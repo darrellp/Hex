@@ -192,7 +192,7 @@
 
         #region Fitting
 
-        static readonly GridLocation[] sideStarts = new[]
+        static readonly GridLocation[] SideStarts = new[]
         {
             new GridLocation(0, 0),
             new GridLocation(1, 0),
@@ -200,7 +200,7 @@
             new GridLocation(0, 0),
         };
 
-        private static readonly GridLocation[] colIncs = new[]
+        private static readonly GridLocation[] ColIncs = new[]
         {
             new GridLocation(1, 0),
             new GridLocation(0, 1),
@@ -221,8 +221,8 @@
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         internal bool Fit(int side, int offset, Board board)
         {
-            var colInc = colIncs[side];
-            var start = (board.Size - 1) * sideStarts[side] + offset * colInc;
+            var colInc = ColIncs[side];
+            var start = (board.Size - 1) * SideStarts[side] + offset * colInc;
             var rowInc = (side == 2 || side == 3 ? -1 : 1) * (new GridLocation(1, 1) - colInc);
             var player = side == 0 || side == 2 ? PlayerColor.Black : PlayerColor.White;
 

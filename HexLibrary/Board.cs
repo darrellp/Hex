@@ -122,7 +122,6 @@ namespace HexLibrary
         internal PlayerColor this[int row, int col]
         {
             get => Players[row, col];
-            private set => Players[row, col] = value;
         }
 
         internal PlayerColor this[GridLocation l]

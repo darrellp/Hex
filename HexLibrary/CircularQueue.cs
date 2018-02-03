@@ -7,8 +7,8 @@ namespace HexLibrary
     public class CircularQueue<T> : IEnumerable<T>
     {
         private readonly T[] _elements;
-        private readonly int _mask = 0;
-        private int _startIndex = 0;
+        private readonly int _mask;
+        private int _startIndex;
 
         public int Length { get; private set; }
 

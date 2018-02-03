@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using HexLibrary;
 using Shouldly;
@@ -121,5 +120,28 @@ namespace HexTest
 		    templates = EdgeTemplateCheck.Check(board, 3);
 		    templates.Count.ShouldBe(0);
 	    }
+
+	    [TestMethod]
+	    public void TestTypeV()
+	    {
+		    board.PlaceStone(4, 3, PlayerColor.White);
+		    var templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(2);
+		    IsPermutation(templates.Select(v => v.Location).ToArray(), ToLocs(4, 3, 4, 3)).ShouldBeTrue();
+		    IsPermutation(templates.Select(v => v.TemplateType).ToArray(), new[] { CheckState.Va, CheckState.Vb }).ShouldBeTrue();
+
+			// Placing a black one two to the right should still be okay
+			board.PlaceStone(4, 5, PlayerColor.Black);
+			templates = EdgeTemplateCheck.Check(board, 3);
+		    templates.Count.ShouldBe(2);
+		    IsPermutation(templates.Select(v => v.Location).ToArray(), ToLocs(4, 3, 4, 3)).ShouldBeTrue();
+		    IsPermutation(templates.Select(v => v.TemplateType).ToArray(), new[] { CheckState.Va, CheckState.Vb }).ShouldBeTrue();
+
+			// But putting it one away should eliminate it
+			board.PlaceStone(4, 4, PlayerColor.Black);
+			templates = EdgeTemplateCheck.Check(board, 3);
+			templates.Count.ShouldBe(0);
+		}
+
 	}
 }

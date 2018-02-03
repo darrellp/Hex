@@ -1,14 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Principal;
 
 namespace HexLibrary
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+    /// <summary>	A check state for edge template identification. </summary>
+    ///
+    /// <remarks>	Edge template identification works through a state machine.  The input to the
+    /// 			machine are the colors of hexes as we advance down the edge and inwards.  Each
+    /// 			hex is examined exactly once and that invalidates the templates possible along
+    /// 			the edge.  For example, a friendly stone on the edge creates an immediate
+    /// 			singleton template but invalidates any templates which may have been possible
+    /// 			earlier along the edge.  A circular queue (_masks) tells which templates are
+    /// 			currently possible along the edge.  Each element in _masks is a short with
+    /// 			one bit per template.  This makes it easy to test for or eliminate multiple
+    /// 			templates at one time.  Whenever we find an unoccupied cell on the edge we check
+    /// 			back for all possible template lengths to see if a template that ends on this
+    /// 			cell is still possible.  If it is, then we've located a template and it gets
+    /// 			added to the return list.  The first element in the circular queue is always
+    /// 			maintained to point to the first possible template on the edge.  It's physical
+    /// 			position along that edge is maintained in _pCol.  We are always searching
+    /// 			relative to this physical position.  The state machine will always use the
+    /// 			relative column and row from that position.  The "columns" represented by
+    /// 			_tCol and _pCol should be understood to be positions along the edge and
+    /// 			the _row is depth from the edge.  Depending on the side, columns and rows
+    /// 			may be reversed from the actual columns and rows on the board and the row
+    /// 			may "increase" by getting smaller.  This conversion is handled by _rowInc,
+    /// 			_colInc and _sideStart in the state.Position property.
+    /// 			
+    /// 			Darrell Plank, 2/2/2018. </remarks>
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
     internal struct CheckState
     {
-        // 2**CircularMaskLog has to be big enough to hold what you need.  We have sizes at most 26
-        // so 2**5 = 32 will do just fine.
-        private const int CircularMaskLog = 5;
+		#region Constants/Statics
+		// 2**CircularMaskLog has to be big enough to hold what you need.  This array
+		// needs to contain all the columns of a template so needs to be big enough to
+		// hold a full template which is 10 so 2**4 = 16 should do
+		private const int CircularMaskLog = 4;
 
         private static readonly int CMasks = EdgeTemplate.EdgeTemplates.Length;
 
@@ -67,15 +95,50 @@ namespace HexLibrary
             new GridLocation(0, 1)
         };
 
+	    // Indexed by length starting at 1 - i.e., use LengthMasks[length - 1]
+	    private static readonly short[] LengthMasks =
+	    {
+		    0b0000000001, //1
+		    0b0000000010, //2
+		    0b0000000000, //3
+		    0b0000001100, //4
+		    0b0000010000, //5
+		    0b0000000000, //6
+		    0b0001100000, //7
+		    0b0010000000, //8
+		    0b0000000000, //9
+		    0b1100000000, //10
+	    };
+
+	    // TmpsByLength[i] is the set of template indices for templates with lengths <= i.
+	    private static readonly short[] TmpsByLength;
+
+	    static CheckState()
+	    {
+		    short curMask = 0;
+		    TmpsByLength = new short[LengthMasks.Length];
+
+		    for (var i = 1; i < LengthMasks.Length; i++)
+		    {
+			    curMask |= LengthMasks[i];
+			    TmpsByLength[i] = curMask;
+		    }
+	    }
+
+		// For memoizing column heights with different masks
+	    private static readonly Dictionary<int, List<int>> TmplSetsToHeights = new Dictionary<int, List<int>>();
+		#endregion
+
+		#region private variables
 		/// <summary>
 		/// These four variables are the real "heart" of the state.  They indicate where we're currently checking,
 		/// what templates are still possible along the edge and where we're searching relative to the potential
 		/// templates still alive.  If these values are correct then the state itself is correct.
 		/// </summary>
-        // Masks showing which templates are alive starting at the corresponding
-        // cell.  Templates alive at MaskQueue would have their left cell at
-        // _pCol along the corresponding side.
-        private readonly CircularQueue<short> _maskQueue;
+		// Masks showing which templates are alive starting at the corresponding
+		// cell.  Templates alive at MaskQueue would have their left cell at
+		// _pCol along the corresponding side.
+		private readonly CircularQueue<short> _masks;
         // The column within templates in MaskQueue[0] being currently examined
         // ReSharper disable once InconsistentNaming
         private int _tCol;
@@ -89,23 +152,28 @@ namespace HexLibrary
         private readonly GridLocation _sideStart;
 
         private readonly Board _board;
+		#endregion
 
-        internal CheckState(Board board, int side)
+		#region Properties
+		internal bool Done => _pCol >= _board.Size - 1;
+        internal GridLocation Position => _sideStart + (_pCol + _tCol) * _colInc + _row* _rowInc;
+		#endregion
+
+		#region Constructor
+		internal CheckState(Board board, int side)
         {
             _board = board;
             _sideStart = (board.Size - 1) * SideStarts[side];
             _colInc = ColIncs[side];
             _rowInc = RowIncs[side];
-            _maskQueue = new CircularQueue<short>(CircularMaskLog);
-            _maskQueue.Queue(0x3fe);
+            _masks = new CircularQueue<short>(CircularMaskLog);
+            _masks.Queue(0x3fe);
             _tCol = _pCol = _row = 0;
         }
+		#endregion
 
-        internal bool Done => _pCol >= _board.Size - 1;
-
-        internal GridLocation Position => _sideStart + (_pCol + _tCol) * _colInc + _row* _rowInc;
-
-        internal PlayerColor Stone()
+		#region Utility Functions
+		internal PlayerColor Stone()
         {
             Console.WriteLine($"Getting stone at {Position}");
             return _board[Position];
@@ -115,7 +183,7 @@ namespace HexLibrary
 	    {
 		    if (_tCol >= -relIndex)
 		    {
-			    _maskQueue[_tCol + relIndex] &= mask;
+			    _masks[_tCol + relIndex] &= mask;
 		    }
 	    }
 
@@ -126,14 +194,14 @@ namespace HexLibrary
 			    return;
 		    }
 		    Console.WriteLine($"Eliminating {TemplateNames[IndexFromMask(mask)]} from position {_pCol + _tCol + relIndex}");
-		    _maskQueue[_tCol + relIndex] &= (short)~mask;
+		    _masks[_tCol + relIndex] &= (short)~mask;
 	    }
 
 	    private void AdvanceColumn()
 	    {
 			++_tCol;
 		    _row = 0;
-		    _maskQueue.Queue(0x3fe);
+		    _masks.Queue(0x3fe);
 		}
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		/// <summary>   Advance the queue by one column. </summary>
@@ -144,7 +212,7 @@ namespace HexLibrary
 	    {
 		    _tCol--;
 		    _pCol++;
-		    _maskQueue.Dequeue();
+		    _masks.Dequeue();
 		    Console.WriteLine($"Advanced to position {_pCol}");
 		}
 
@@ -155,7 +223,7 @@ namespace HexLibrary
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         private void CheckMask()
         {
-            while (_maskQueue[0] == 0 && _tCol > 0)
+            while (_masks[0] == 0 && _tCol > 0)
             {
                 AdvanceQueue();
             }
@@ -233,36 +301,6 @@ namespace HexLibrary
             CheckMask();
         }
 
-        // Indexed by length starting at 1 - i.e., use LengthMasks[length - 1]
-        private static readonly short[] LengthMasks =
-        {
-            0b0000000001, //1
-            0b0000000010, //2
-            0b0000000000, //3
-            0b0000001100, //4
-            0b0000010000, //5
-            0b0000000000, //6
-            0b0001100000, //7
-            0b0010000000, //8
-            0b0000000000, //9
-            0b1100000000, //10
-        };
-
-        // TmpsByLength[i] is the set of template indices for templates with lengths <= i.
-        private static readonly short[] TmpsByLength;
-
-        static CheckState()
-        {
-            short curMask = 0;
-            TmpsByLength = new short[LengthMasks.Length];
-
-            for (var i = 1; i < LengthMasks.Length; i++)
-            {
-                curMask |= LengthMasks[i];
-                TmpsByLength[i] = curMask;
-            }
-        }
-
         private static int IndexFromMask(int mask)
         {
             switch (mask)
@@ -297,8 +335,6 @@ namespace HexLibrary
             }
         }
 
-        private static readonly Dictionary<int, List<int>> TmplSetsToHeights = new Dictionary<int, List<int>>();
-
         private static int ColumnHeight(int tcol, CircularQueue<short> masks)
         {
             var ret = 0;
@@ -329,6 +365,9 @@ namespace HexLibrary
                             }
                         }
                     }
+
+					// Memoize the height list we just calculated.  These values are intrinsic to the
+					// game so this dictionary can be static.
                     TmplSetsToHeights[masks[i]] = htList;
                 }
 
@@ -342,8 +381,10 @@ namespace HexLibrary
 
             return ret;
         }
+		#endregion
 
-        internal void ProcessUnoccupied(List<EdgeTemplateConnection> edgeTemplateConnections)
+		#region State Machine functions
+		internal void ProcessUnoccupied(List<EdgeTemplateConnection> edgeTemplateConnections)
         {
 	        if (_row == 0)
 	        {
@@ -352,7 +393,7 @@ namespace HexLibrary
 
 				if (_tCol != 0)
 		        {
-			        var mask = (short) (LengthMasks[_tCol] & _maskQueue[0]);
+			        var mask = (short) (LengthMasks[_tCol] & _masks[0]);
 
 			        // Check to see if any active templates from state._tCol 0 end here
 			        if (mask != 0)
@@ -376,7 +417,7 @@ namespace HexLibrary
 				        edgeTemplateConnections.Add(new EdgeTemplateConnection(templateIndex, connection));
 
 				        // Eliminate this template from contention
-				        _maskQueue[0] &= (short) ~mask;
+				        _masks[0] &= (short) ~mask;
 
 				        // Check to see if there are any more active templates at the original position and 
 				        // if not, advance forward until we find more active templates.
@@ -395,20 +436,20 @@ namespace HexLibrary
             EliminateConnectingStone();
 
             // Let's move to the next state.Row
-            if (++_row >= ColumnHeight(_tCol, _maskQueue))
+            if (++_row >= ColumnHeight(_tCol, _masks))
             {
                 // Time to move to the next column
                 _tCol++;
                 _row = 0;
                 // Any templates which fit can potentially be realized from this point
-                _maskQueue.Queue(TmpsByLength[Math.Min(TmpsByLength.Length - 1, _board.Size - _pCol - _tCol)]);
+                _masks.Queue(TmpsByLength[Math.Min(TmpsByLength.Length - 1, _board.Size - _pCol - _tCol)]);
             }
         }
 
         internal void ProcessUnfriendly(List<EdgeTemplateConnection> ret)
         {
 			// If it's unfriendly, it's not our connecting stone nor is anything above it
-	        for (var iRow = _row; iRow < ColumnHeight(_tCol, _maskQueue); iRow++)
+	        for (var iRow = _row; iRow < ColumnHeight(_tCol, _masks); iRow++)
 	        {
 				EliminateConnectingStone(iRow);
 	        }
@@ -416,21 +457,21 @@ namespace HexLibrary
 			// Check out don't care cases
 			switch (_row)
 			{
-				case 0 when _tCol >= 2 && (_maskQueue[_tCol - 2] & IIIcM) != 0:
+				case 0 when _tCol >= 2 && (_masks[_tCol - 2] & IIIcM) != 0:
 					// IIIc is the only template possible.  Advance our position to
 					// account for this specific template
 					AdvanceTo(-2);
-					_maskQueue[0] = IIIcM;
-					_maskQueue[1] = _maskQueue[2] = 0;
+					_masks[0] = IIIcM;
+					_masks[1] = _masks[2] = 0;
 					++_row;
 					return;
 
-				case 1 when _tCol >= 3 && (_maskQueue[_tCol - 3] & IVcM) != 0:
+				case 1 when _tCol >= 3 && (_masks[_tCol - 3] & IVcM) != 0:
 					// We're on don't care of IVc. Advance our position to
 					// account for this specific template
 					AdvanceTo(-3);
-					_maskQueue[0] = IVcM;
-					_maskQueue[1] = _maskQueue[2] = _maskQueue[3] = 0;
+					_masks[0] = IVcM;
+					_masks[1] = _masks[2] = _masks[3] = 0;
 					++_row;
 					return;
 			}
@@ -443,8 +484,8 @@ namespace HexLibrary
 				case 0:
 				case 1:
 					// All previous templates are invalidated
-					_maskQueue.Clear();
-					_maskQueue.Queue(0x3fe);
+					_masks.Clear();
+					_masks.Queue(0x3fe);
 					_pCol += _tCol + 1;
 					_tCol = _row = 0;
 					break;
@@ -480,22 +521,22 @@ namespace HexLibrary
                     var index = _tCol - 4;
                     if (index >= 0)
                     {
-                        _maskQueue[index] &= ~VbM;
+                        _masks[index] &= ~VbM;
                     }
 
                     if (++index >= 0)
                     {
-                        _maskQueue[index] &= ~VaM & ~VbM;
+                        _masks[index] &= ~VaM & ~VbM;
                     }
 
                     if (++index >= 0)
                     {
-                        _maskQueue[index] &= ~VaM & ~VbM;
+                        _masks[index] &= ~VaM & ~VbM;
                     }
 
                     if (++index >= 0)
                     {
-	                    _maskQueue[index] &= ~VaM;
+	                    _masks[index] &= ~VaM;
                     }
                     CheckMask();
 	                AdvanceColumn();
@@ -519,15 +560,15 @@ namespace HexLibrary
 					// by adding _tCol to it and _tCol must be zero.  The AdvanceColumn at the bottom
 					// will then move us past the stone.
 					
-                    _maskQueue.Clear();
-					_maskQueue.Queue(0);
+                    _masks.Clear();
+					_masks.Queue(0);
 	                _pCol += _tCol;
 	                _tCol = 0;
                     break;
 
                 case 1:
                     AdvanceTo(0);
-                    _maskQueue[0] = IIM;
+                    _masks[0] = IIM;
                     break;
 
                 case 2:
@@ -554,6 +595,6 @@ namespace HexLibrary
 
 	        AdvanceColumn();
         }
-
+		#endregion
 	}
 }
