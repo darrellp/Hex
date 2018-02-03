@@ -33,13 +33,6 @@ namespace HexLibrary
     internal struct CheckState
     {
 		#region Constants/Statics
-		// 2**CircularMaskLog has to be big enough to hold what you need.  This array
-		// needs to contain all the columns of a template so needs to be big enough to
-		// hold a full template which is 10 so 2**4 = 16 should do
-		private const int CircularMaskLog = 4;
-
-        private static readonly int CMasks = EdgeTemplate.EdgeTemplates.Length;
-
         // ReSharper disable InconsistentNaming
         // Indices named by template types as on p. 72
         // ReSharper disable once UnusedMember.Local
@@ -320,7 +313,7 @@ namespace HexLibrary
         {
             var index = 0;
             var mask = 1;
-            for (var i = 0; i < CMasks; i++)
+            for (var i = 0; i < EdgeTemplate.EdgeTemplates.Length; i++)
             {
                 if ((templates & mask) != 0)
                 {
